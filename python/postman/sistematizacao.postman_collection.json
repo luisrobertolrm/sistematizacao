@@ -1,0 +1,315 @@
+{
+  "info": {
+    "name": "Sistematizacao - Analise de Churn",
+    "description": "API de previsao de churn (Telco Customer Churn).\n\nSuba a API antes com `uv run python -m sistematizacao.web` (ou pelo container Docker).\n\nA variavel `baseUrl` fica na propria colecao (http://localhost:8000); troque ali ou sobrescreva por um Environment.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:8000", "type": "string" }
+  ],
+  "item": [
+    {
+      "name": "Health",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": { "raw": "{{baseUrl}}/health", "host": ["{{baseUrl}}"], "path": ["health"] },
+        "description": "Diz se o processo esta de pe e se o binario do modelo esta disponivel."
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('status 200', () => pm.response.to.have.status(200));",
+              "const b = pm.response.json();",
+              "pm.test('status ok', () => pm.expect(b.status).to.eql('ok'));",
+              "pm.test('binario do modelo presente', () => pm.expect(b.modelo_disponivel).to.be.true);"
+            ]
+          }
+        }
+      ],
+      "response": [
+        {
+          "name": "200 OK",
+          "originalRequest": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/health", "host": ["{{baseUrl}}"], "path": ["health"] }
+          },
+          "status": "OK",
+          "code": 200,
+          "_postman_previewlanguage": "json",
+          "header": [{ "key": "Content-Type", "value": "application/json" }],
+          "body": "{\n  \"status\": \"ok\",\n  \"modelo_disponivel\": true\n}"
+        }
+      ]
+    },
+    {
+      "name": "Metadados do modelo",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": { "raw": "{{baseUrl}}/modelo", "host": ["{{baseUrl}}"], "path": ["modelo"] },
+        "description": "Params escolhidos pelo Optuna, metricas medidas no hold-out e data do treino.\n\nResponde 503 enquanto a etapa de treinamento_avaliacao nao tiver rodado."
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('status 200', () => pm.response.to.have.status(200));",
+              "const b = pm.response.json();",
+              "pm.test('traz metricas do teste', () => pm.expect(b.metricas_teste).to.have.property('f1_macro'));"
+            ]
+          }
+        }
+      ],
+      "response": [
+        {
+          "name": "200 OK",
+          "originalRequest": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/modelo", "host": ["{{baseUrl}}"], "path": ["modelo"] }
+          },
+          "status": "OK",
+          "code": 200,
+          "_postman_previewlanguage": "json",
+          "header": [{ "key": "Content-Type", "value": "application/json" }],
+          "body": "{\n  \"nome\": \"LogisticRegression (tunada)\",\n  \"params\": { \"C\": 3.0595430013194873, \"class_weight\": null },\n  \"metricas_teste\": {\n    \"acc\": 0.7910447761194029,\n    \"f1_macro\": 0.7171932770351572,\n    \"f1_churn\": 0.5726744186046512,\n    \"auc\": 0.827177733717794\n  },\n  \"treinado_em\": \"2026-08-19T19:18:02.709564+00:00\"\n}"
+        }
+      ]
+    },
+    {
+      "name": "Prever - cliente de risco",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"SeniorCitizen\": 0,\n  \"Partner\": \"No\",\n  \"Dependents\": \"No\",\n  \"tenure\": 2,\n  \"PhoneService\": \"Yes\",\n  \"MultipleLines\": \"No\",\n  \"InternetService\": \"Fiber optic\",\n  \"OnlineSecurity\": \"No\",\n  \"OnlineBackup\": \"No\",\n  \"DeviceProtection\": \"No\",\n  \"TechSupport\": \"No\",\n  \"StreamingTV\": \"Yes\",\n  \"StreamingMovies\": \"Yes\",\n  \"Contract\": \"Month-to-month\",\n  \"PaperlessBilling\": \"Yes\",\n  \"PaymentMethod\": \"Electronic check\",\n  \"MonthlyCharges\": 95.5\n}",
+          "options": { "raw": { "language": "json" } }
+        },
+        "url": { "raw": "{{baseUrl}}/prever", "host": ["{{baseUrl}}"], "path": ["prever"] },
+        "description": "Perfil que o modelo marca como churn: contrato mensal, fibra, cliente novo e fatura alta.\n\n`tenure` vai cru — a API aplica a mesma engenharia de atributos do treino (faixa_tenure) antes de prever."
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('status 200', () => pm.response.to.have.status(200));",
+              "const b = pm.response.json();",
+              "pm.test('classificado como Churn', () => pm.expect(b.rotulo).to.eql('Churn'));",
+              "pm.test('probabilidade acima do limiar', () => pm.expect(b.probabilidade_churn).to.be.above(0.5));"
+            ]
+          }
+        }
+      ],
+      "response": [
+        {
+          "name": "200 OK",
+          "originalRequest": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{}" },
+            "url": { "raw": "{{baseUrl}}/prever", "host": ["{{baseUrl}}"], "path": ["prever"] }
+          },
+          "status": "OK",
+          "code": 200,
+          "_postman_previewlanguage": "json",
+          "header": [{ "key": "Content-Type", "value": "application/json" }],
+          "body": "{\n  \"probabilidade_churn\": 0.7954,\n  \"churn\": 1,\n  \"rotulo\": \"Churn\"\n}"
+        }
+      ]
+    },
+    {
+      "name": "Prever - cliente fiel",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"SeniorCitizen\": 0,\n  \"Partner\": \"Yes\",\n  \"Dependents\": \"Yes\",\n  \"tenure\": 60,\n  \"PhoneService\": \"Yes\",\n  \"MultipleLines\": \"No\",\n  \"InternetService\": \"DSL\",\n  \"OnlineSecurity\": \"Yes\",\n  \"OnlineBackup\": \"Yes\",\n  \"DeviceProtection\": \"Yes\",\n  \"TechSupport\": \"Yes\",\n  \"StreamingTV\": \"No\",\n  \"StreamingMovies\": \"No\",\n  \"Contract\": \"Two year\",\n  \"PaperlessBilling\": \"No\",\n  \"PaymentMethod\": \"Bank transfer (automatic)\",\n  \"MonthlyCharges\": 45.0\n}",
+          "options": { "raw": { "language": "json" } }
+        },
+        "url": { "raw": "{{baseUrl}}/prever", "host": ["{{baseUrl}}"], "path": ["prever"] },
+        "description": "Contraponto ao anterior: contrato de dois anos, DSL, cliente antigo e debito automatico."
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('status 200', () => pm.response.to.have.status(200));",
+              "const b = pm.response.json();",
+              "pm.test('classificado como Fica', () => pm.expect(b.rotulo).to.eql('Fica'));"
+            ]
+          }
+        }
+      ],
+      "response": []
+    },
+    {
+      "name": "Prever - limiar customizado",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"SeniorCitizen\": 0,\n  \"Partner\": \"Yes\",\n  \"Dependents\": \"No\",\n  \"tenure\": 20,\n  \"PhoneService\": \"Yes\",\n  \"MultipleLines\": \"Yes\",\n  \"InternetService\": \"Fiber optic\",\n  \"OnlineSecurity\": \"No\",\n  \"OnlineBackup\": \"Yes\",\n  \"DeviceProtection\": \"No\",\n  \"TechSupport\": \"No\",\n  \"StreamingTV\": \"No\",\n  \"StreamingMovies\": \"Yes\",\n  \"Contract\": \"One year\",\n  \"PaperlessBilling\": \"Yes\",\n  \"PaymentMethod\": \"Credit card (automatic)\",\n  \"MonthlyCharges\": 78.3\n}",
+          "options": { "raw": { "language": "json" } }
+        },
+        "url": {
+          "raw": "{{baseUrl}}/prever?limiar=0.3",
+          "host": ["{{baseUrl}}"],
+          "path": ["prever"],
+          "query": [
+            {
+              "key": "limiar",
+              "value": "0.3",
+              "description": "Corte de probabilidade (0 a 1). Abaixar aumenta o recall da classe Churn ao custo da precisao - util em campanha de retencao."
+            }
+          ]
+        },
+        "description": "Mesmo modelo, corte mais agressivo. Mostra o trade-off precisao x recall sem retreinar nada."
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('status 200', () => pm.response.to.have.status(200));",
+              "const b = pm.response.json();",
+              "pm.test('classe respeita o limiar de 0.3', () => {",
+              "  pm.expect(b.churn).to.eql(b.probabilidade_churn >= 0.3 ? 1 : 0);",
+              "});"
+            ]
+          }
+        }
+      ],
+      "response": []
+    },
+    {
+      "name": "Prever em lote",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "[\n  {\n    \"SeniorCitizen\": 0,\n    \"Partner\": \"No\",\n    \"Dependents\": \"No\",\n    \"tenure\": 2,\n    \"PhoneService\": \"Yes\",\n    \"MultipleLines\": \"No\",\n    \"InternetService\": \"Fiber optic\",\n    \"OnlineSecurity\": \"No\",\n    \"OnlineBackup\": \"No\",\n    \"DeviceProtection\": \"No\",\n    \"TechSupport\": \"No\",\n    \"StreamingTV\": \"Yes\",\n    \"StreamingMovies\": \"Yes\",\n    \"Contract\": \"Month-to-month\",\n    \"PaperlessBilling\": \"Yes\",\n    \"PaymentMethod\": \"Electronic check\",\n    \"MonthlyCharges\": 95.5\n  },\n  {\n    \"SeniorCitizen\": 1,\n    \"Partner\": \"Yes\",\n    \"Dependents\": \"Yes\",\n    \"tenure\": 60,\n    \"PhoneService\": \"Yes\",\n    \"MultipleLines\": \"No\",\n    \"InternetService\": \"DSL\",\n    \"OnlineSecurity\": \"Yes\",\n    \"OnlineBackup\": \"Yes\",\n    \"DeviceProtection\": \"Yes\",\n    \"TechSupport\": \"Yes\",\n    \"StreamingTV\": \"No\",\n    \"StreamingMovies\": \"No\",\n    \"Contract\": \"Two year\",\n    \"PaperlessBilling\": \"No\",\n    \"PaymentMethod\": \"Bank transfer (automatic)\",\n    \"MonthlyCharges\": 45.0\n  },\n  {\n    \"SeniorCitizen\": 0,\n    \"Partner\": \"No\",\n    \"Dependents\": \"No\",\n    \"tenure\": 15,\n    \"PhoneService\": \"No\",\n    \"MultipleLines\": \"No phone service\",\n    \"InternetService\": \"DSL\",\n    \"OnlineSecurity\": \"No\",\n    \"OnlineBackup\": \"No\",\n    \"DeviceProtection\": \"No\",\n    \"TechSupport\": \"No\",\n    \"StreamingTV\": \"No\",\n    \"StreamingMovies\": \"No\",\n    \"Contract\": \"Month-to-month\",\n    \"PaperlessBilling\": \"Yes\",\n    \"PaymentMethod\": \"Mailed check\",\n    \"MonthlyCharges\": 35.9\n  }\n]",
+          "options": { "raw": { "language": "json" } }
+        },
+        "url": {
+          "raw": "{{baseUrl}}/prever/lote",
+          "host": ["{{baseUrl}}"],
+          "path": ["prever", "lote"]
+        },
+        "description": "Lista de clientes numa chamada so. O `limiar` tambem vale aqui como query param."
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('status 200', () => pm.response.to.have.status(200));",
+              "const b = pm.response.json();",
+              "pm.test('devolve uma previsao por cliente', () => {",
+              "  pm.expect(b.quantidade).to.eql(3);",
+              "  pm.expect(b.previsoes).to.have.lengthOf(3);",
+              "});",
+              "pm.test('cada previsao tem probabilidade e rotulo', () => {",
+              "  b.previsoes.forEach(p => {",
+              "    pm.expect(p).to.have.property('probabilidade_churn');",
+              "    pm.expect(p.rotulo).to.be.oneOf(['Churn', 'Fica']);",
+              "  });",
+              "});"
+            ]
+          }
+        }
+      ],
+      "response": [
+        {
+          "name": "200 OK",
+          "originalRequest": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "[]" },
+            "url": {
+              "raw": "{{baseUrl}}/prever/lote",
+              "host": ["{{baseUrl}}"],
+              "path": ["prever", "lote"]
+            }
+          },
+          "status": "OK",
+          "code": 200,
+          "_postman_previewlanguage": "json",
+          "header": [{ "key": "Content-Type", "value": "application/json" }],
+          "body": "{\n  \"quantidade\": 2,\n  \"limiar\": 0.5,\n  \"previsoes\": [\n    { \"probabilidade_churn\": 0.7954, \"churn\": 1, \"rotulo\": \"Churn\" },\n    { \"probabilidade_churn\": 0.034, \"churn\": 0, \"rotulo\": \"Fica\" }\n  ]\n}"
+        }
+      ]
+    },
+    {
+      "name": "Recarregar modelo",
+      "request": {
+        "method": "POST",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/modelo/recarregar",
+          "host": ["{{baseUrl}}"],
+          "path": ["modelo", "recarregar"]
+        },
+        "description": "Descarta o modelo em memoria e le o .joblib de novo do disco. Usado depois de um retreino, sem reiniciar o container."
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('status 200', () => pm.response.to.have.status(200));",
+              "pm.test('confirma o recarregamento', () => pm.expect(pm.response.json().status).to.eql('modelo recarregado'));"
+            ]
+          }
+        }
+      ],
+      "response": []
+    },
+    {
+      "name": "Erro - categoria invalida (422)",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"SeniorCitizen\": 0,\n  \"Partner\": \"No\",\n  \"Dependents\": \"No\",\n  \"tenure\": 2,\n  \"PhoneService\": \"Yes\",\n  \"MultipleLines\": \"No\",\n  \"InternetService\": \"Fiber optic\",\n  \"OnlineSecurity\": \"No\",\n  \"OnlineBackup\": \"No\",\n  \"DeviceProtection\": \"No\",\n  \"TechSupport\": \"No\",\n  \"StreamingTV\": \"Yes\",\n  \"StreamingMovies\": \"Yes\",\n  \"Contract\": \"Mensal\",\n  \"PaperlessBilling\": \"Yes\",\n  \"PaymentMethod\": \"Electronic check\",\n  \"MonthlyCharges\": 95.5\n}",
+          "options": { "raw": { "language": "json" } }
+        },
+        "url": { "raw": "{{baseUrl}}/prever", "host": ["{{baseUrl}}"], "path": ["prever"] },
+        "description": "`Contract` so aceita Month-to-month, One year ou Two year. Categoria fora da lista e barrada pelo Pydantic antes de chegar ao modelo."
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('status 422', () => pm.response.to.have.status(422));",
+              "pm.test('aponta o campo Contract', () => {",
+              "  pm.expect(JSON.stringify(pm.response.json())).to.include('Contract');",
+              "});"
+            ]
+          }
+        }
+      ],
+      "response": []
+    }
+  ]
+}

@@ -56,6 +56,19 @@ curl -X POST http://localhost:8000/prever -H "Content-Type: application/json" -d
 O campo `tenure` e enviado cru: a API aplica a mesma engenharia de atributos do
 treino (`faixa_tenure`) antes de chamar o modelo.
 
+### Postman
+
+`postman/sistematizacao.postman_collection.json` (Collection v2.1) cobre as 5
+rotas mais um caso de erro 422, cada request com testes automaticos. Importe
+junto `postman/local.postman_environment.json` ou edite a variavel `baseUrl`
+da propria colecao.
+
+Da para rodar tudo de uma vez pela linha de comando:
+
+```bash
+newman run postman/sistematizacao.postman_collection.json   -e postman/local.postman_environment.json
+```
+
 ## Docker
 
 ```bash
