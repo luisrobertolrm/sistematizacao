@@ -1,0 +1,36 @@
+services:
+  api:
+    build:
+      context: ./python
+      dockerfile: Dockerfile
+    image: sistematizacao-api:latest
+    container_name: sistematizacao-api
+    restart: unless-stopped
+    ports:
+      # host:container — troque a porta da esquerda se 8000 ja estiver em uso no servidor
+      - "8000:8000"
+    environment:
+      HOST: "0.0.0.0"
+      PORT: "8000"
+      # o binario do modelo vem embutido na imagem (python/modelos/ e versionado)
+      DIR_MODELOS: /app/modelos
+      DIR_DADOS: /app/dados
+      DIR_RELATORIOS: /app/relatorios
+    volumes:
+      # CSVs gerados por POST /dados/fake sobrevivem a redeploys
+      - dados_novos:/app/dados/novos
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - |
+          import sys, urllib.request
+          sys.exit(0 if urllib.request.urlopen("http://127.0.0.1:8000/health").status == 200 else 1)
+      interval: 30s
+      timeout: 5s
+      start_period: 20s
+      retries: 3
+
+volumes:
+  dados_novos:
