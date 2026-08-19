@@ -1,0 +1,44 @@
+name: Deploy Sistematizacao
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+# uma implantacao por vez: evita dois `docker compose up` disputando o mesmo diretorio
+concurrency:
+  group: deploy-sistematizacao
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: self-hosted
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Sync e build
+        run: |
+          rsync -av --exclude='.env' --exclude='.git' \
+            "$GITHUB_WORKSPACE/" /DATA/sistematizacao/
+          cd /DATA/sistematizacao
+          docker compose up -d --build
+
+      - name: Aguardar o container ficar saudavel
+        run: |
+          cd /DATA/sistematizacao
+          for i in $(seq 1 30); do
+            if curl -fsS http://127.0.0.1:8000/health; then
+              echo ""
+              echo "API respondeu em ${i}0s."
+              exit 0
+            fi
+            sleep 10
+          done
+          echo "A API nao respondeu no /health a tempo. Logs:"
+          docker compose logs --tail=80
+          exit 1
+
+      - name: Limpar imagens orfas
+        if: success()
+        run: docker image prune -f
