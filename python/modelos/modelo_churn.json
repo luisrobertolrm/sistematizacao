@@ -1,0 +1,33 @@
+{
+  "nome": "LogisticRegression (tunada)",
+  "params": {
+    "C": 3.0595430013194873,
+    "class_weight": null
+  },
+  "metricas_teste": {
+    "acc": 0.7910447761194029,
+    "f1_macro": 0.7171932770351572,
+    "f1_churn": 0.5726744186046512,
+    "auc": 0.827177733717794
+  },
+  "treinado_em": "2026-08-19T19:18:02.709564+00:00",
+  "colunas_entrada": [
+    "SeniorCitizen",
+    "Partner",
+    "Dependents",
+    "PhoneService",
+    "MultipleLines",
+    "InternetService",
+    "OnlineSecurity",
+    "OnlineBackup",
+    "DeviceProtection",
+    "TechSupport",
+    "StreamingTV",
+    "StreamingMovies",
+    "Contract",
+    "PaperlessBilling",
+    "PaymentMethod",
+    "MonthlyCharges",
+    "faixa_tenure"
+  ]
+}

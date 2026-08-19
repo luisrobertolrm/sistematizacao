@@ -1,0 +1,22 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+
+# IDE
+.idea/
+.vscode/
+
+# Dados brutos e saidas geradas (os binarios em python/modelos SAO versionados)
+python/dados/*.csv
+python/relatorios/*
+!python/relatorios/.gitkeep
+!python/dados/.gitkeep
+
+# Notebooks
+.ipynb_checkpoints/
