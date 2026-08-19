@@ -19,6 +19,12 @@ from sistematizacao.carregar_modelo import (
     limpar_cache,
     prever,
 )
+from sistematizacao.gerador_fake import (
+    COLUNAS_ORIGINAIS,
+    DIR_NOVOS,
+    MAX_LINHAS,
+    gerar_e_salvar,
+)
 
 Sim = Literal["Yes", "No"]
 SimSemInternet = Literal["Yes", "No", "No internet service"]
@@ -69,6 +75,20 @@ class RespostaLote(BaseModel):
     previsoes: list[Previsao]
 
 
+class ArquivoGerado(BaseModel):
+    arquivo: str
+    caminho: str
+    linhas: int
+    colunas: list[str]
+    taxa_churn: float
+
+
+class ArquivoNovo(BaseModel):
+    arquivo: str
+    linhas: int
+    bytes: int
+
+
 @app.get("/health", summary="Liveness/readiness")
 def health() -> dict[str, object]:
     """Diz se o processo esta de pe e se o binario do modelo esta disponivel."""
@@ -111,6 +131,57 @@ def prever_lote(
         limiar=limiar,
         previsoes=[Previsao(**linha) for linha in resultado.to_dict(orient="records")],
     )
+
+
+@app.post(
+    "/dados/fake",
+    response_model=ArquivoGerado,
+    status_code=201,
+    summary="Gera dados sinteticos e grava em dados/novos",
+)
+def gerar_dados_fake(
+    linhas: Annotated[int, Query(ge=1, le=MAX_LINHAS)] = 100,
+    semente: Annotated[int | None, Query(description="Fixa o sorteio p/ reproduzir")] = None,
+    nome: Annotated[str | None, Query(description="Nome do arquivo; padrao usa timestamp")] = None,
+) -> ArquivoGerado:
+    """Grava um CSV com as mesmas 21 colunas do dataset original, na mesma ordem.
+
+    As colunas sao sorteadas da distribuicao empirica do CSV original e o rotulo
+    Churn sai da probabilidade do proprio modelo — serve para exercitar o
+    pipeline ponta a ponta, nao para medir a qualidade do modelo.
+    """
+    try:
+        destino, df = gerar_e_salvar(linhas=linhas, semente=semente, nome=nome)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    except OSError as exc:
+        raise HTTPException(status_code=500, detail=f"Falha ao gravar: {exc}") from exc
+
+    return ArquivoGerado(
+        arquivo=destino.name,
+        caminho=str(destino),
+        linhas=len(df),
+        colunas=COLUNAS_ORIGINAIS,
+        taxa_churn=round(float((df["Churn"] == "Yes").mean()), 4),
+    )
+
+
+@app.get(
+    "/dados/novos",
+    response_model=list[ArquivoNovo],
+    summary="Lista os CSVs ja gerados",
+)
+def listar_dados_novos() -> list[ArquivoNovo]:
+    if not DIR_NOVOS.exists():
+        return []
+    return [
+        ArquivoNovo(
+            arquivo=csv.name,
+            linhas=sum(1 for _ in csv.open(encoding="utf-8")) - 1,
+            bytes=csv.stat().st_size,
+        )
+        for csv in sorted(DIR_NOVOS.glob("*.csv"))
+    ]
 
 
 @app.post("/modelo/recarregar", summary="Recarrega o binario do disco")

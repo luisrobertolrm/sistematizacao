@@ -5,7 +5,16 @@
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
-    { "key": "baseUrl", "value": "http://localhost:8000", "type": "string" }
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8000",
+      "type": "string"
+    },
+    {
+      "key": "ultimoArquivo",
+      "value": "",
+      "type": "string"
+    }
   ],
   "item": [
     {
@@ -13,7 +22,15 @@
       "request": {
         "method": "GET",
         "header": [],
-        "url": { "raw": "{{baseUrl}}/health", "host": ["{{baseUrl}}"], "path": ["health"] },
+        "url": {
+          "raw": "{{baseUrl}}/health",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "health"
+          ]
+        },
         "description": "Diz se o processo esta de pe e se o binario do modelo esta disponivel."
       },
       "event": [
@@ -36,12 +53,25 @@
           "originalRequest": {
             "method": "GET",
             "header": [],
-            "url": { "raw": "{{baseUrl}}/health", "host": ["{{baseUrl}}"], "path": ["health"] }
+            "url": {
+              "raw": "{{baseUrl}}/health",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "health"
+              ]
+            }
           },
           "status": "OK",
           "code": 200,
           "_postman_previewlanguage": "json",
-          "header": [{ "key": "Content-Type", "value": "application/json" }],
+          "header": [
+            {
+              "key": "Content-Type",
+              "value": "application/json"
+            }
+          ],
           "body": "{\n  \"status\": \"ok\",\n  \"modelo_disponivel\": true\n}"
         }
       ]
@@ -51,7 +81,15 @@
       "request": {
         "method": "GET",
         "header": [],
-        "url": { "raw": "{{baseUrl}}/modelo", "host": ["{{baseUrl}}"], "path": ["modelo"] },
+        "url": {
+          "raw": "{{baseUrl}}/modelo",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "modelo"
+          ]
+        },
         "description": "Params escolhidos pelo Optuna, metricas medidas no hold-out e data do treino.\n\nResponde 503 enquanto a etapa de treinamento_avaliacao nao tiver rodado."
       },
       "event": [
@@ -73,12 +111,25 @@
           "originalRequest": {
             "method": "GET",
             "header": [],
-            "url": { "raw": "{{baseUrl}}/modelo", "host": ["{{baseUrl}}"], "path": ["modelo"] }
+            "url": {
+              "raw": "{{baseUrl}}/modelo",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "modelo"
+              ]
+            }
           },
           "status": "OK",
           "code": 200,
           "_postman_previewlanguage": "json",
-          "header": [{ "key": "Content-Type", "value": "application/json" }],
+          "header": [
+            {
+              "key": "Content-Type",
+              "value": "application/json"
+            }
+          ],
           "body": "{\n  \"nome\": \"LogisticRegression (tunada)\",\n  \"params\": { \"C\": 3.0595430013194873, \"class_weight\": null },\n  \"metricas_teste\": {\n    \"acc\": 0.7910447761194029,\n    \"f1_macro\": 0.7171932770351572,\n    \"f1_churn\": 0.5726744186046512,\n    \"auc\": 0.827177733717794\n  },\n  \"treinado_em\": \"2026-08-19T19:18:02.709564+00:00\"\n}"
         }
       ]
@@ -87,13 +138,30 @@
       "name": "Prever - cliente de risco",
       "request": {
         "method": "POST",
-        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
         "body": {
           "mode": "raw",
           "raw": "{\n  \"SeniorCitizen\": 0,\n  \"Partner\": \"No\",\n  \"Dependents\": \"No\",\n  \"tenure\": 2,\n  \"PhoneService\": \"Yes\",\n  \"MultipleLines\": \"No\",\n  \"InternetService\": \"Fiber optic\",\n  \"OnlineSecurity\": \"No\",\n  \"OnlineBackup\": \"No\",\n  \"DeviceProtection\": \"No\",\n  \"TechSupport\": \"No\",\n  \"StreamingTV\": \"Yes\",\n  \"StreamingMovies\": \"Yes\",\n  \"Contract\": \"Month-to-month\",\n  \"PaperlessBilling\": \"Yes\",\n  \"PaymentMethod\": \"Electronic check\",\n  \"MonthlyCharges\": 95.5\n}",
-          "options": { "raw": { "language": "json" } }
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
         },
-        "url": { "raw": "{{baseUrl}}/prever", "host": ["{{baseUrl}}"], "path": ["prever"] },
+        "url": {
+          "raw": "{{baseUrl}}/prever",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "prever"
+          ]
+        },
         "description": "Perfil que o modelo marca como churn: contrato mensal, fibra, cliente novo e fatura alta.\n\n`tenure` vai cru — a API aplica a mesma engenharia de atributos do treino (faixa_tenure) antes de prever."
       },
       "event": [
@@ -115,14 +183,35 @@
           "name": "200 OK",
           "originalRequest": {
             "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
-            "body": { "mode": "raw", "raw": "{}" },
-            "url": { "raw": "{{baseUrl}}/prever", "host": ["{{baseUrl}}"], "path": ["prever"] }
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/prever",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "prever"
+              ]
+            }
           },
           "status": "OK",
           "code": 200,
           "_postman_previewlanguage": "json",
-          "header": [{ "key": "Content-Type", "value": "application/json" }],
+          "header": [
+            {
+              "key": "Content-Type",
+              "value": "application/json"
+            }
+          ],
           "body": "{\n  \"probabilidade_churn\": 0.7954,\n  \"churn\": 1,\n  \"rotulo\": \"Churn\"\n}"
         }
       ]
@@ -131,13 +220,30 @@
       "name": "Prever - cliente fiel",
       "request": {
         "method": "POST",
-        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
         "body": {
           "mode": "raw",
           "raw": "{\n  \"SeniorCitizen\": 0,\n  \"Partner\": \"Yes\",\n  \"Dependents\": \"Yes\",\n  \"tenure\": 60,\n  \"PhoneService\": \"Yes\",\n  \"MultipleLines\": \"No\",\n  \"InternetService\": \"DSL\",\n  \"OnlineSecurity\": \"Yes\",\n  \"OnlineBackup\": \"Yes\",\n  \"DeviceProtection\": \"Yes\",\n  \"TechSupport\": \"Yes\",\n  \"StreamingTV\": \"No\",\n  \"StreamingMovies\": \"No\",\n  \"Contract\": \"Two year\",\n  \"PaperlessBilling\": \"No\",\n  \"PaymentMethod\": \"Bank transfer (automatic)\",\n  \"MonthlyCharges\": 45.0\n}",
-          "options": { "raw": { "language": "json" } }
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
         },
-        "url": { "raw": "{{baseUrl}}/prever", "host": ["{{baseUrl}}"], "path": ["prever"] },
+        "url": {
+          "raw": "{{baseUrl}}/prever",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "prever"
+          ]
+        },
         "description": "Contraponto ao anterior: contrato de dois anos, DSL, cliente antigo e debito automatico."
       },
       "event": [
@@ -159,16 +265,29 @@
       "name": "Prever - limiar customizado",
       "request": {
         "method": "POST",
-        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
         "body": {
           "mode": "raw",
           "raw": "{\n  \"SeniorCitizen\": 0,\n  \"Partner\": \"Yes\",\n  \"Dependents\": \"No\",\n  \"tenure\": 20,\n  \"PhoneService\": \"Yes\",\n  \"MultipleLines\": \"Yes\",\n  \"InternetService\": \"Fiber optic\",\n  \"OnlineSecurity\": \"No\",\n  \"OnlineBackup\": \"Yes\",\n  \"DeviceProtection\": \"No\",\n  \"TechSupport\": \"No\",\n  \"StreamingTV\": \"No\",\n  \"StreamingMovies\": \"Yes\",\n  \"Contract\": \"One year\",\n  \"PaperlessBilling\": \"Yes\",\n  \"PaymentMethod\": \"Credit card (automatic)\",\n  \"MonthlyCharges\": 78.3\n}",
-          "options": { "raw": { "language": "json" } }
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
         },
         "url": {
           "raw": "{{baseUrl}}/prever?limiar=0.3",
-          "host": ["{{baseUrl}}"],
-          "path": ["prever"],
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "prever"
+          ],
           "query": [
             {
               "key": "limiar",
@@ -200,16 +319,30 @@
       "name": "Prever em lote",
       "request": {
         "method": "POST",
-        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
         "body": {
           "mode": "raw",
           "raw": "[\n  {\n    \"SeniorCitizen\": 0,\n    \"Partner\": \"No\",\n    \"Dependents\": \"No\",\n    \"tenure\": 2,\n    \"PhoneService\": \"Yes\",\n    \"MultipleLines\": \"No\",\n    \"InternetService\": \"Fiber optic\",\n    \"OnlineSecurity\": \"No\",\n    \"OnlineBackup\": \"No\",\n    \"DeviceProtection\": \"No\",\n    \"TechSupport\": \"No\",\n    \"StreamingTV\": \"Yes\",\n    \"StreamingMovies\": \"Yes\",\n    \"Contract\": \"Month-to-month\",\n    \"PaperlessBilling\": \"Yes\",\n    \"PaymentMethod\": \"Electronic check\",\n    \"MonthlyCharges\": 95.5\n  },\n  {\n    \"SeniorCitizen\": 1,\n    \"Partner\": \"Yes\",\n    \"Dependents\": \"Yes\",\n    \"tenure\": 60,\n    \"PhoneService\": \"Yes\",\n    \"MultipleLines\": \"No\",\n    \"InternetService\": \"DSL\",\n    \"OnlineSecurity\": \"Yes\",\n    \"OnlineBackup\": \"Yes\",\n    \"DeviceProtection\": \"Yes\",\n    \"TechSupport\": \"Yes\",\n    \"StreamingTV\": \"No\",\n    \"StreamingMovies\": \"No\",\n    \"Contract\": \"Two year\",\n    \"PaperlessBilling\": \"No\",\n    \"PaymentMethod\": \"Bank transfer (automatic)\",\n    \"MonthlyCharges\": 45.0\n  },\n  {\n    \"SeniorCitizen\": 0,\n    \"Partner\": \"No\",\n    \"Dependents\": \"No\",\n    \"tenure\": 15,\n    \"PhoneService\": \"No\",\n    \"MultipleLines\": \"No phone service\",\n    \"InternetService\": \"DSL\",\n    \"OnlineSecurity\": \"No\",\n    \"OnlineBackup\": \"No\",\n    \"DeviceProtection\": \"No\",\n    \"TechSupport\": \"No\",\n    \"StreamingTV\": \"No\",\n    \"StreamingMovies\": \"No\",\n    \"Contract\": \"Month-to-month\",\n    \"PaperlessBilling\": \"Yes\",\n    \"PaymentMethod\": \"Mailed check\",\n    \"MonthlyCharges\": 35.9\n  }\n]",
-          "options": { "raw": { "language": "json" } }
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
         },
         "url": {
           "raw": "{{baseUrl}}/prever/lote",
-          "host": ["{{baseUrl}}"],
-          "path": ["prever", "lote"]
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "prever",
+            "lote"
+          ]
         },
         "description": "Lista de clientes numa chamada so. O `limiar` tambem vale aqui como query param."
       },
@@ -240,21 +373,205 @@
           "name": "200 OK",
           "originalRequest": {
             "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
-            "body": { "mode": "raw", "raw": "[]" },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "[]"
+            },
             "url": {
               "raw": "{{baseUrl}}/prever/lote",
-              "host": ["{{baseUrl}}"],
-              "path": ["prever", "lote"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "prever",
+                "lote"
+              ]
             }
           },
           "status": "OK",
           "code": 200,
           "_postman_previewlanguage": "json",
-          "header": [{ "key": "Content-Type", "value": "application/json" }],
+          "header": [
+            {
+              "key": "Content-Type",
+              "value": "application/json"
+            }
+          ],
           "body": "{\n  \"quantidade\": 2,\n  \"limiar\": 0.5,\n  \"previsoes\": [\n    { \"probabilidade_churn\": 0.7954, \"churn\": 1, \"rotulo\": \"Churn\" },\n    { \"probabilidade_churn\": 0.034, \"churn\": 0, \"rotulo\": \"Fica\" }\n  ]\n}"
         }
       ]
+    },
+    {
+      "name": "Gerar dados fake",
+      "request": {
+        "method": "POST",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/dados/fake?linhas=500&semente=7",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "dados",
+            "fake"
+          ],
+          "query": [
+            {
+              "key": "linhas",
+              "value": "500",
+              "description": "1 a 100000"
+            },
+            {
+              "key": "semente",
+              "value": "7",
+              "description": "Fixa o sorteio: mesma semente, mesmo arquivo. Remova para variar."
+            },
+            {
+              "key": "nome",
+              "value": "",
+              "disabled": true,
+              "description": "Nome do arquivo; o padrao usa timestamp."
+            }
+          ]
+        },
+        "description": "Grava em dados/novos/ um CSV com as mesmas 21 colunas do dataset original, na mesma ordem.\n\nAs colunas saem da distribuicao empirica do original e o rotulo Churn vem da probabilidade do proprio modelo — util para exercitar o pipeline, nao para medir a qualidade dele."
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('status 201', () => pm.response.to.have.status(201));",
+              "const b = pm.response.json();",
+              "pm.test('gerou o numero de linhas pedido', () => pm.expect(b.linhas).to.eql(500));",
+              "pm.test('21 colunas iguais as do original', () => {",
+              "  pm.expect(b.colunas).to.have.lengthOf(21);",
+              "  pm.expect(b.colunas[0]).to.eql('customerID');",
+              "  pm.expect(b.colunas[20]).to.eql('Churn');",
+              "});",
+              "pm.test('taxa de churn plausivel', () => pm.expect(b.taxa_churn).to.be.within(0.1, 0.5));",
+              "pm.collectionVariables.set('ultimoArquivo', b.arquivo);"
+            ]
+          }
+        }
+      ],
+      "response": [
+        {
+          "name": "201 Created",
+          "originalRequest": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/dados/fake?linhas=500&semente=7",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "dados",
+                "fake"
+              ],
+              "query": [
+                {
+                  "key": "linhas",
+                  "value": "500"
+                },
+                {
+                  "key": "semente",
+                  "value": "7"
+                }
+              ]
+            }
+          },
+          "status": "Created",
+          "code": 201,
+          "_postman_previewlanguage": "json",
+          "header": [
+            {
+              "key": "Content-Type",
+              "value": "application/json"
+            }
+          ],
+          "body": "{\n  \"arquivo\": \"clientes_fake_20260819_200513.csv\",\n  \"caminho\": \"C:\\\\Git\\\\Sistematizacao\\\\python\\\\dados\\\\novos\\\\clientes_fake_20260819_200513.csv\",\n  \"linhas\": 500,\n  \"colunas\": [\n    \"customerID\",\n    \"gender\",\n    \"...\",\n    \"TotalCharges\",\n    \"Churn\"\n  ],\n  \"taxa_churn\": 0.212\n}"
+        }
+      ]
+    },
+    {
+      "name": "Listar dados gerados",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/dados/novos",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "dados",
+            "novos"
+          ]
+        },
+        "description": "Lista os CSVs ja gravados em dados/novos/, com contagem de linhas e tamanho."
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('status 200', () => pm.response.to.have.status(200));",
+              "const b = pm.response.json();",
+              "pm.test('lista o arquivo recem gerado', () => {",
+              "  const nome = pm.collectionVariables.get('ultimoArquivo');",
+              "  pm.expect(b.map(f => f.arquivo)).to.include(nome);",
+              "});"
+            ]
+          }
+        }
+      ],
+      "response": []
+    },
+    {
+      "name": "Erro - linhas fora do intervalo (422)",
+      "request": {
+        "method": "POST",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/dados/fake?linhas=0",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "dados",
+            "fake"
+          ],
+          "query": [
+            {
+              "key": "linhas",
+              "value": "0"
+            }
+          ]
+        },
+        "description": "`linhas` aceita de 1 a 100000."
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('status 422', () => pm.response.to.have.status(422));"
+            ]
+          }
+        }
+      ],
+      "response": []
     },
     {
       "name": "Recarregar modelo",
@@ -263,8 +580,13 @@
         "header": [],
         "url": {
           "raw": "{{baseUrl}}/modelo/recarregar",
-          "host": ["{{baseUrl}}"],
-          "path": ["modelo", "recarregar"]
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "modelo",
+            "recarregar"
+          ]
         },
         "description": "Descarta o modelo em memoria e le o .joblib de novo do disco. Usado depois de um retreino, sem reiniciar o container."
       },
@@ -286,13 +608,30 @@
       "name": "Erro - categoria invalida (422)",
       "request": {
         "method": "POST",
-        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
         "body": {
           "mode": "raw",
           "raw": "{\n  \"SeniorCitizen\": 0,\n  \"Partner\": \"No\",\n  \"Dependents\": \"No\",\n  \"tenure\": 2,\n  \"PhoneService\": \"Yes\",\n  \"MultipleLines\": \"No\",\n  \"InternetService\": \"Fiber optic\",\n  \"OnlineSecurity\": \"No\",\n  \"OnlineBackup\": \"No\",\n  \"DeviceProtection\": \"No\",\n  \"TechSupport\": \"No\",\n  \"StreamingTV\": \"Yes\",\n  \"StreamingMovies\": \"Yes\",\n  \"Contract\": \"Mensal\",\n  \"PaperlessBilling\": \"Yes\",\n  \"PaymentMethod\": \"Electronic check\",\n  \"MonthlyCharges\": 95.5\n}",
-          "options": { "raw": { "language": "json" } }
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
         },
-        "url": { "raw": "{{baseUrl}}/prever", "host": ["{{baseUrl}}"], "path": ["prever"] },
+        "url": {
+          "raw": "{{baseUrl}}/prever",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "prever"
+          ]
+        },
         "description": "`Contract` so aceita Month-to-month, One year ou Two year. Categoria fora da lista e barrada pelo Pydantic antes de chegar ao modelo."
       },
       "event": [

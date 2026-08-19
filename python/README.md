@@ -13,6 +13,7 @@ quebrado em modulos executaveis e exposto por uma API HTTP.
 | `src/sistematizacao/treinamento_avaliacao.py` | 7 | tuning da LogisticRegression com Optuna, avaliacao no hold-out e gravacao do binario |
 | `src/sistematizacao/observacao.py` | 8 | alimenta o binario em lotes e acompanha a metrica acumulada |
 | `src/sistematizacao/carregar_modelo.py` | — | carrega o `.joblib` e faz predicao sobre dados novos |
+| `src/sistematizacao/gerador_fake.py` | — | gera CSVs sinteticos identicos ao original em `dados/novos/` |
 | `src/sistematizacao/web.py` | — | API FastAPI para enviar novos dados de analise |
 | `modelos/` | — | binarios treinados (`modelo_churn.joblib` + metadados JSON) |
 
@@ -40,6 +41,8 @@ uv run python -m sistematizacao.web                    # API em http://localhost
 | GET | `/modelo` | params, metricas e data do treino |
 | POST | `/prever` | analisa um cliente |
 | POST | `/prever/lote` | analisa uma lista de clientes |
+| POST | `/dados/fake` | gera dados sinteticos e grava em `dados/novos/` |
+| GET | `/dados/novos` | lista os CSVs ja gerados |
 | POST | `/modelo/recarregar` | recarrega o binario do disco apos novo treino |
 
 ```bash
@@ -68,6 +71,37 @@ Da para rodar tudo de uma vez pela linha de comando:
 ```bash
 newman run postman/sistematizacao.postman_collection.json   -e postman/local.postman_environment.json
 ```
+
+## Dados sinteticos
+
+`POST /dados/fake?linhas=500&semente=7` grava em `dados/novos/` um CSV com as
+mesmas 21 colunas do dataset original, na mesma ordem — inclusive as manias
+dele: `customerID` no formato `4 digitos-5 letras` e `TotalCharges` em branco
+quando `tenure` e 0.
+
+As colunas sao sorteadas da distribuicao empirica do CSV original (com as
+dependencias reimpostas: sem telefone -> `No phone service`, sem internet ->
+`No internet service`), e o rotulo `Churn` sai da probabilidade do proprio
+modelo. Isso deixa o arquivo coerente para exercitar o pipeline ponta a ponta,
+mas **nao serve para medir a qualidade do modelo** — o dado ja nasce
+concordando com ele.
+
+`semente` fixa o sorteio: mesma semente, mesmo arquivo. Sem semente, cada
+chamada gera um conjunto diferente.
+
+Tambem roda fora da API:
+
+```bash
+uv run python -m sistematizacao.gerador_fake
+```
+
+Para analisar o arquivo gerado com o pipeline, aponte o `CHURN_CSV` para ele:
+
+```bash
+CHURN_CSV=dados/novos/clientes_fake_20260819_200513.csv uv run python -m sistematizacao.observacao
+```
+
+Os CSVs gerados nao entram no git.
 
 ## Docker
 

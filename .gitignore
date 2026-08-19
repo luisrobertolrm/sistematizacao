@@ -14,9 +14,11 @@ venv/
 
 # Dados brutos e saidas geradas (os binarios em python/modelos SAO versionados)
 python/dados/*.csv
+python/dados/novos/*.csv
 python/relatorios/*
 !python/relatorios/.gitkeep
 !python/dados/.gitkeep
+!python/dados/novos/.gitkeep
 
 # Notebooks
 .ipynb_checkpoints/
