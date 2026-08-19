@@ -13,7 +13,7 @@ quebrado em modulos executaveis e exposto por uma API HTTP.
 | `src/sistematizacao/treinamento_avaliacao.py` | 7 | tuning da LogisticRegression com Optuna, avaliacao no hold-out e gravacao do binario |
 | `src/sistematizacao/observacao.py` | 8 | alimenta o binario em lotes e acompanha a metrica acumulada |
 | `src/sistematizacao/carregar_modelo.py` | — | carrega o `.joblib` e faz predicao sobre dados novos |
-| `src/sistematizacao/gerador_fake.py` | — | gera CSVs sinteticos identicos ao original em `dados/novos/` |
+| `src/sistematizacao/gerador_fake.py` | — | gera CSVs sinteticos com Faker, identicos ao original, em `dados/novos/` |
 | `src/sistematizacao/web.py` | — | API FastAPI para enviar novos dados de analise |
 | `modelos/` | — | binarios treinados (`modelo_churn.joblib` + metadados JSON) |
 
@@ -79,12 +79,21 @@ mesmas 21 colunas do dataset original, na mesma ordem — inclusive as manias
 dele: `customerID` no formato `4 digitos-5 letras` e `TotalCharges` em branco
 quando `tenure` e 0.
 
-As colunas sao sorteadas da distribuicao empirica do CSV original (com as
-dependencias reimpostas: sem telefone -> `No phone service`, sem internet ->
-`No internet service`), e o rotulo `Churn` sai da probabilidade do proprio
-modelo. Isso deixa o arquivo coerente para exercitar o pipeline ponta a ponta,
-mas **nao serve para medir a qualidade do modelo** — o dado ja nasce
-concordando com ele.
+Cada campo sai de um provider do [Faker](https://faker.readthedocs.io):
+`fake.random_element([...])` para as categoricas, `fake.random_int` para
+`tenure` e `fake.pyfloat(min_value=20, max_value=120)` para `MonthlyCharges`.
+As dependencias entre colunas sao reimpostas depois do sorteio (sem telefone ->
+`No phone service`, sem internet -> `No internet service`), porque sortear
+campo a campo as quebraria.
+
+O rotulo `Churn` sai da probabilidade do proprio modelo, o que deixa o arquivo
+coerente para exercitar o pipeline ponta a ponta, mas **nao serve para medir a
+qualidade do modelo** — o dado ja nasce concordando com ele.
+
+Como o Faker sorteia cada categoria de forma uniforme, as marginais **nao**
+reproduzem as do dataset real (a taxa de churn do gerado fica perto de 0.14
+contra 0.27 do original). Para dados de volume/carga isso e irrelevante; para
+comparar distribuicoes, nao use o gerado.
 
 `semente` fixa o sorteio: mesma semente, mesmo arquivo. Sem semente, cada
 chamada gera um conjunto diferente.

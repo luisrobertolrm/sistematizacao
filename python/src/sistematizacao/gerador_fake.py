@@ -1,15 +1,15 @@
-"""Geracao de dados sinteticos no mesmo formato do CSV original.
+"""Geracao de dados sinteticos com Faker, no mesmo formato do CSV original.
 
 O arquivo gerado em `dados/novos/` tem exatamente as 21 colunas do
 WA_Fn-UseC_-Telco-Customer-Churn.csv, na mesma ordem, incluindo as manias do
 original: `TotalCharges` em branco quando `tenure` e 0 e `customerID` no
 formato 4 digitos + 5 letras.
 
-Quando o CSV original esta disponivel, cada coluna e sorteada da distribuicao
-empirica dele (preserva as marginais). Sem ele, cai para distribuicoes fixas
-declaradas aqui. As dependencias entre colunas (sem telefone -> sem multiplas
-linhas, sem internet -> sem servicos de internet) sao aplicadas depois do
-sorteio, porque amostrar coluna a coluna as quebraria.
+Cada campo sai de um provider do Faker (`random_element` para as categoricas,
+`pyfloat`/`random_int` para as numericas). As dependencias entre colunas
+(sem telefone -> sem multiplas linhas, sem internet -> sem servicos de
+internet) sao aplicadas depois do sorteio, porque sortear campo a campo as
+quebraria.
 """
 
 from __future__ import annotations
@@ -17,11 +17,12 @@ from __future__ import annotations
 import string
 from datetime import UTC, datetime
 from pathlib import Path
+from typing import Any
 
-import numpy as np
 import pandas as pd
+from faker import Faker
 
-from sistematizacao.carregamento_inicial import DIR_DADOS, localizar_csv
+from sistematizacao.carregamento_inicial import DIR_DADOS
 
 DIR_NOVOS = DIR_DADOS / "novos"
 
@@ -59,82 +60,58 @@ SERVICOS_INTERNET = [
     "StreamingMovies",
 ]
 
-# usadas so quando o CSV original nao esta ao alcance
-DISTRIBUICOES_PADRAO: dict[str, dict[str, float]] = {
-    "gender": {"Male": 0.505, "Female": 0.495},
-    "SeniorCitizen": {"0": 0.838, "1": 0.162},
-    "Partner": {"No": 0.517, "Yes": 0.483},
-    "Dependents": {"No": 0.701, "Yes": 0.299},
-    "PhoneService": {"Yes": 0.903, "No": 0.097},
-    "MultipleLines": {"No": 0.481, "Yes": 0.422, "No phone service": 0.097},
-    "InternetService": {"Fiber optic": 0.440, "DSL": 0.344, "No": 0.216},
-    "OnlineSecurity": {"No": 0.497, "Yes": 0.287, "No internet service": 0.216},
-    "OnlineBackup": {"No": 0.439, "Yes": 0.345, "No internet service": 0.216},
-    "DeviceProtection": {"No": 0.439, "Yes": 0.345, "No internet service": 0.216},
-    "TechSupport": {"No": 0.493, "Yes": 0.291, "No internet service": 0.216},
-    "StreamingTV": {"No": 0.399, "Yes": 0.385, "No internet service": 0.216},
-    "StreamingMovies": {"No": 0.395, "Yes": 0.389, "No internet service": 0.216},
-    "Contract": {"Month-to-month": 0.550, "Two year": 0.241, "One year": 0.209},
-    "PaperlessBilling": {"Yes": 0.592, "No": 0.408},
-    "PaymentMethod": {
-        "Electronic check": 0.336,
-        "Mailed check": 0.229,
-        "Bank transfer (automatic)": 0.219,
-        "Credit card (automatic)": 0.216,
-    },
-}
+# dominios de cada categorica, iguais aos do CSV original
+SIM_NAO = ["Yes", "No"]
+CONTRATOS = ["Month-to-month", "One year", "Two year"]
+INTERNET = ["DSL", "Fiber optic", "No"]
+LINHAS_MULTIPLAS = ["Yes", "No", "No phone service"]
+SERVICO_OU_SEM_INTERNET = ["Yes", "No", "No internet service"]
+PAGAMENTOS = [
+    "Electronic check",
+    "Mailed check",
+    "Bank transfer (automatic)",
+    "Credit card (automatic)",
+]
 
-TAXA_CHURN_PADRAO = 0.265
+TENURE_MIN = 0
 TENURE_MAX = 72
-COBRANCA_MIN = 18.25
-COBRANCA_MAX = 118.75
+COBRANCA_MIN = 20
+COBRANCA_MAX = 120
+TAXA_CHURN_PADRAO = 0.265
+RUIDO_TOTAL_MIN = 0.85
+RUIDO_TOTAL_MAX = 1.15
 MAX_LINHAS = 100_000
 
 
-def _identificadores(rng: np.random.Generator, n: int) -> list[str]:
-    """customerID no formato do original (4 digitos + 5 letras), sem repetir."""
-    letras = np.array(list(string.ascii_uppercase))
-    vistos: set[str] = set()
-    ids: list[str] = []
-    while len(ids) < n:
-        numero = rng.integers(1000, 10000)
-        sufixo = "".join(rng.choice(letras, size=5))
-        novo = f"{numero}-{sufixo}"
-        if novo not in vistos:
-            vistos.add(novo)
-            ids.append(novo)
-    return ids
-
-
-def _amostrar_do_original(
-    rng: np.random.Generator, n: int, base: pd.DataFrame
-) -> dict[str, np.ndarray]:
-    """Sorteia cada coluna da distribuicao empirica do CSV original."""
-    colunas: dict[str, np.ndarray] = {}
-    for col in COLUNAS_ORIGINAIS:
-        if col in {"customerID", "TotalCharges", "Churn"}:
-            continue
-        valores = base[col].to_numpy()
-        colunas[col] = rng.choice(valores, size=n, replace=True)
-    return colunas
-
-
-def _amostrar_do_padrao(rng: np.random.Generator, n: int) -> dict[str, np.ndarray]:
-    """Sorteia cada coluna das distribuicoes fixas declaradas no modulo."""
-    colunas: dict[str, np.ndarray] = {}
-    for col, dist in DISTRIBUICOES_PADRAO.items():
-        chaves = list(dist)
-        pesos = np.array(list(dist.values()), dtype=float)
-        sorteado = rng.choice(chaves, size=n, p=pesos / pesos.sum())
-        colunas[col] = sorteado.astype(int) if col == "SeniorCitizen" else sorteado
-
-    colunas["tenure"] = rng.integers(0, TENURE_MAX + 1, size=n)
-    colunas["MonthlyCharges"] = np.round(rng.uniform(COBRANCA_MIN, COBRANCA_MAX, size=n), 2)
-    return colunas
+def _linha(fake: Faker) -> dict[str, Any]:
+    """Um cliente sintetico, campo a campo pelos providers do Faker."""
+    return {
+        "customerID": fake.bothify(text="####-?????", letters=string.ascii_uppercase),
+        "gender": fake.random_element(["Male", "Female"]),
+        "SeniorCitizen": fake.random_element([0, 1]),
+        "Partner": fake.random_element(SIM_NAO),
+        "Dependents": fake.random_element(SIM_NAO),
+        "tenure": fake.random_int(min=TENURE_MIN, max=TENURE_MAX),
+        "PhoneService": fake.random_element(SIM_NAO),
+        "MultipleLines": fake.random_element(LINHAS_MULTIPLAS),
+        "InternetService": fake.random_element(INTERNET),
+        "OnlineSecurity": fake.random_element(SERVICO_OU_SEM_INTERNET),
+        "OnlineBackup": fake.random_element(SERVICO_OU_SEM_INTERNET),
+        "DeviceProtection": fake.random_element(SERVICO_OU_SEM_INTERNET),
+        "TechSupport": fake.random_element(SERVICO_OU_SEM_INTERNET),
+        "StreamingTV": fake.random_element(SERVICO_OU_SEM_INTERNET),
+        "StreamingMovies": fake.random_element(SERVICO_OU_SEM_INTERNET),
+        "Contract": fake.random_element(CONTRATOS),
+        "PaperlessBilling": fake.random_element(SIM_NAO),
+        "PaymentMethod": fake.random_element(PAGAMENTOS),
+        "MonthlyCharges": fake.pyfloat(
+            min_value=COBRANCA_MIN, max_value=COBRANCA_MAX, right_digits=2
+        ),
+    }
 
 
 def _coerir_dependencias(df: pd.DataFrame) -> pd.DataFrame:
-    """Reimpoe as regras que o sorteio coluna-a-coluna quebra."""
+    """Reimpoe as regras que o sorteio campo-a-campo quebra."""
     sem_telefone = df["PhoneService"] == "No"
     df.loc[sem_telefone, "MultipleLines"] = "No phone service"
     df.loc[~sem_telefone & (df["MultipleLines"] == "No phone service"), "MultipleLines"] = "No"
@@ -147,19 +124,25 @@ def _coerir_dependencias(df: pd.DataFrame) -> pd.DataFrame:
     return df
 
 
-def _total_charges(rng: np.random.Generator, df: pd.DataFrame) -> pd.Series:
+def _total_charges(fake: Faker, df: pd.DataFrame) -> pd.Series:
     """TotalCharges ~ tenure x MonthlyCharges com ruido; em branco quando tenure=0.
 
     Os 11 brancos do CSV original sao exatamente as linhas com tenure=0 — a
     razao de o carregamento_inicial converter com `errors="coerce"` e derrubar
     os nulos. O gerado reproduz isso para exercitar o mesmo caminho.
     """
-    ruido = rng.normal(1.0, 0.05, size=len(df)).clip(0.7, 1.6)
+    ruido = pd.Series(
+        [
+            fake.pyfloat(min_value=RUIDO_TOTAL_MIN, max_value=RUIDO_TOTAL_MAX, right_digits=3)
+            for _ in range(len(df))
+        ],
+        index=df.index,
+    )
     total = (df["tenure"] * df["MonthlyCharges"] * ruido).round(2)
     return total.astype(str).where(df["tenure"] > 0, "")
 
 
-def _sortear_churn(rng: np.random.Generator, df: pd.DataFrame) -> np.ndarray:
+def _sortear_churn(fake: Faker, df: pd.DataFrame) -> list[str]:
     """Churn tirado da probabilidade do modelo treinado; sem ele, da taxa base.
 
     Usar o modelo deixa o rotulo coerente com os atributos — bom para exercitar
@@ -169,11 +152,11 @@ def _sortear_churn(rng: np.random.Generator, df: pd.DataFrame) -> np.ndarray:
     try:
         from sistematizacao.carregar_modelo import prever  # noqa: PLC0415
 
-        prob = prever(df)["probabilidade_churn"].to_numpy()
+        probabilidades = prever(df)["probabilidade_churn"].tolist()
     except (FileNotFoundError, ValueError, KeyError):
-        prob = np.full(len(df), TAXA_CHURN_PADRAO)
+        probabilidades = [TAXA_CHURN_PADRAO] * len(df)
 
-    return np.where(rng.random(len(df)) < prob, "Yes", "No")
+    return ["Yes" if fake.random.random() < p else "No" for p in probabilidades]
 
 
 def gerar(linhas: int = 100, semente: int | None = None) -> pd.DataFrame:
@@ -182,23 +165,16 @@ def gerar(linhas: int = 100, semente: int | None = None) -> pd.DataFrame:
         msg = f"linhas deve estar entre 1 e {MAX_LINHAS}."
         raise ValueError(msg)
 
-    rng = np.random.default_rng(semente)
+    fake = Faker()
+    if semente is not None:
+        fake.seed_instance(semente)  # mesma semente -> mesmo arquivo
 
-    try:
-        base = pd.read_csv(localizar_csv())
-        colunas = _amostrar_do_original(rng, linhas, base)
-        origem = "distribuicao empirica do CSV original"
-    except (FileNotFoundError, IndexError, OSError):
-        colunas = _amostrar_do_padrao(rng, linhas)
-        origem = "distribuicoes fixas do modulo"
-
-    df = pd.DataFrame(colunas)
-    df.insert(0, "customerID", _identificadores(rng, linhas))
+    df = pd.DataFrame([_linha(fake) for _ in range(linhas)])
     df = _coerir_dependencias(df)
-    df["TotalCharges"] = _total_charges(rng, df)
-    df["Churn"] = _sortear_churn(rng, df)
+    df["TotalCharges"] = _total_charges(fake, df)
+    df["Churn"] = _sortear_churn(fake, df)
 
-    print(f"Gerou {linhas} linhas a partir da {origem}.")
+    print(f"Gerou {linhas} linhas com Faker (semente={semente}).")
     return df[COLUNAS_ORIGINAIS]
 
 
