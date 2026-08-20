@@ -27,10 +27,14 @@ jobs:
       - name: Aguardar o container ficar saudavel
         run: |
           cd /DATA/sistematizacao
+          # a porta do host vem do .env do servidor; 8000 e so a porta interna
+          if [ -f .env ]; then set -a; . ./.env; set +a; fi
+          PORTA="${APP_PORT:-8005}"
+          echo "Checando http://127.0.0.1:${PORTA}/health"
           for i in $(seq 1 30); do
-            if curl -fsS http://127.0.0.1:8000/health; then
+            if curl -fsS "http://127.0.0.1:${PORTA}/health"; then
               echo ""
-              echo "API respondeu em ${i}0s."
+              echo "API respondeu apos ~$((i * 10))s."
               exit 0
             fi
             sleep 10

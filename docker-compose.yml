@@ -6,9 +6,13 @@ services:
     image: sistematizacao-api:latest
     container_name: sistematizacao-api
     restart: unless-stopped
+    env_file:
+      - path: .env
+        required: false
     ports:
-      # host:container — troque a porta da esquerda se 8000 ja estiver em uso no servidor
-      - "8000:8000"
+      # porta interna fixa; a do host vem do .env (APP_PORT).
+      # 8005 e o padrao: no servidor 8000 ja e do comic-prompt2 e 8002-8004 dos demais apps.
+      - "${APP_PORT:-8005}:8000"
     environment:
       HOST: "0.0.0.0"
       PORT: "8000"
