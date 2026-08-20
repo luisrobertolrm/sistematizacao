@@ -37,9 +37,43 @@ mkdir -p "$DIR_APP" "$DIR_RUNNER"
 echo "==> 2/6 .env do app (porta publicada no host)"
 if [ -f "$DIR_APP/.env" ]; then
   echo "    ja existe, preservando: $(cat "$DIR_APP/.env")"
+  # shellcheck disable=SC1091
+  set -a; . "$DIR_APP/.env"; set +a
 else
   echo "APP_PORT=${APP_PORT}" > "$DIR_APP/.env"
   echo "    criado com APP_PORT=${APP_PORT}"
+fi
+
+echo "==> 2b/6 Conferindo se a porta ${APP_PORT} esta livre"
+# quem esta escutando na porta? (ignora o proprio container, em re-execucoes)
+DONO_PORTA="$(docker ps --format '{{.Names}}\t{{.Ports}}' \
+  | grep -E "(^|[^0-9]):${APP_PORT}->" | cut -f1 | grep -v '^sistematizacao-api$' || true)"
+
+EM_USO_HOST=""
+if command -v ss >/dev/null 2>&1; then
+  ss -ltnH 2>/dev/null | awk '{print $4}' | grep -qE "[:.]${APP_PORT}$" && EM_USO_HOST="sim"
+elif command -v netstat >/dev/null 2>&1; then
+  netstat -ltn 2>/dev/null | awk '{print $4}' | grep -qE "[:.]${APP_PORT}$" && EM_USO_HOST="sim"
+fi
+
+if [ -n "$DONO_PORTA" ]; then
+  echo "    ERRO: a porta ${APP_PORT} ja e publicada pelo container: ${DONO_PORTA}"
+elif [ -n "$EM_USO_HOST" ] && ! docker ps --format '{{.Names}}' | grep -q '^sistematizacao-api$'; then
+  echo "    ERRO: algo no host ja escuta na porta ${APP_PORT} (fora do Docker)."
+else
+  echo "    livre (ou ja e do proprio sistematizacao-api)"
+  PORTA_OK="sim"
+fi
+
+if [ -z "${PORTA_OK:-}" ]; then
+  echo
+  echo "    Portas publicadas hoje neste servidor:"
+  docker ps --format '      {{.Names}}: {{.Ports}}' | grep -o '0.0.0.0:[0-9]*' | sort -u -t: -k2 -n
+  echo
+  echo "    Escolha uma porta livre e rode de novo, por exemplo:"
+  echo "      APP_PORT=8006 $0 <TOKEN>"
+  echo "    (ou edite ${DIR_APP}/.env). Nada foi instalado."
+  exit 1
 fi
 
 echo "==> 3/6 Download do runner ${VERSAO}"
