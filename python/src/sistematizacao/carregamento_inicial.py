@@ -94,6 +94,18 @@ def carregar_bruto() -> pd.DataFrame:
     return pd.read_csv(csv)
 
 
+def carregar_novos() -> list[pd.DataFrame]:
+    """Le os CSVs de dados/novos/ (alimentados via POST /dados/fake).
+
+    Mesmas 21 colunas do original -> concatenaveis antes da limpeza. Em
+    producao, esta funcao seria trocada pela leitura da fonte real (banco).
+    """
+    dir_novos = DIR_DADOS / "novos"
+    if not dir_novos.exists():
+        return []
+    return [pd.read_csv(csv) for csv in sorted(dir_novos.glob("*.csv"))]
+
+
 def limpar(df: pd.DataFrame) -> pd.DataFrame:
     """Converte TotalCharges, remove nulos e binariza o alvo."""
     df = df.copy()
@@ -148,9 +160,20 @@ def construir_preprocessador(X: pd.DataFrame) -> ColumnTransformer:
     )
 
 
-def preparar_tudo() -> Dados:
-    """Executa o pipeline completo de preparacao e devolve o pacote de dados."""
-    df = aplicar_engenharia_atributos(limpar(carregar_bruto()))
+def preparar_tudo(*, incluir_novos: bool = False) -> Dados:
+    """Executa o pipeline completo de preparacao e devolve o pacote de dados.
+
+    incluir_novos=True concatena dados/novos/ ao dataset original antes da
+    limpeza (usado no re-treino via API). O default False mantem EDA,
+    observacao e treino manual inalterados.
+    """
+    bruto = carregar_bruto()
+    if incluir_novos:
+        extras = carregar_novos()
+        if extras:
+            bruto = pd.concat([bruto, *extras], ignore_index=True)
+            print(f"Incluidos {len(extras)} arquivo(s) de dados/novos -> {len(bruto)} linhas")
+    df = aplicar_engenharia_atributos(limpar(bruto))
     X, y = separar_x_y(df)
     pre = construir_preprocessador(X)
 

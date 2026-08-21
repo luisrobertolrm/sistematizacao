@@ -8,6 +8,7 @@ dados chegam aos poucos e a metrica precisa ser acompanhada ao longo do tempo.
 from __future__ import annotations
 
 import json
+from datetime import UTC, datetime
 from typing import TYPE_CHECKING
 
 import numpy as np
@@ -20,13 +21,18 @@ from sklearn.metrics import (
 
 from sistematizacao.carregamento_inicial import (
     ALVO,
-    DIR_RELATORIOS,
     preparar_tudo,
 )
 from sistematizacao.carregar_modelo import (
     carregar_metadados,
     carregar_modelo,
     preparar_entrada,
+)
+from sistematizacao.runs import (
+    dir_avaliacao,
+    ler_manifesto,
+    novo_eval_id,
+    registrar_avaliacao,
 )
 
 if TYPE_CHECKING:
@@ -80,11 +86,23 @@ def observar_em_lotes(
 
 
 def salvar_historico(historico: list[dict[str, float]]) -> None:
-    """Grava o acompanhamento em `relatorios/` para comparacao entre execucoes."""
-    DIR_RELATORIOS.mkdir(parents=True, exist_ok=True)
-    destino = DIR_RELATORIOS / "observacao_lotes.json"
-    destino.write_text(json.dumps(historico, indent=2), encoding="utf-8")
-    print(f"Historico salvo em: {destino}")
+    """Grava o acompanhamento em avaliacoes/<eval_id>/, ligado ao run em producao."""
+    eval_id = novo_eval_id()
+    destino = dir_avaliacao(eval_id)
+    (destino / "observacao_lotes.json").write_text(
+        json.dumps(historico, indent=2), encoding="utf-8"
+    )
+
+    run_producao = ler_manifesto().get("producao")
+    registrar_avaliacao(
+        eval_id,
+        {
+            "avaliado_em": datetime.now(UTC).isoformat(),
+            "run_avaliado": run_producao,
+            "f1_macro_final": historico[-1]["f1_macro"] if historico else None,
+        },
+    )
+    print(f"Avaliacao salva em: {destino} (modelo em producao: {run_producao})")
 
 
 def main() -> None:
