@@ -22,3 +22,6 @@ python/relatorios/*
 
 # Notebooks
 .ipynb_checkpoints/
+
+# .env fica no servidor, nunca versionado
+.env
