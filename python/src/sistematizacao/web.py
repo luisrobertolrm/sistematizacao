@@ -9,6 +9,7 @@ from __future__ import annotations
 from typing import Annotated, Literal
 
 from fastapi import FastAPI, HTTPException, Query
+from fastapi.responses import FileResponse
 from pydantic import BaseModel, Field
 
 from sistematizacao.carregamento_inicial import ARQUIVO_MODELO
@@ -193,6 +194,71 @@ def recarregar() -> dict[str, str]:
     except FileNotFoundError as exc:
         raise HTTPException(status_code=503, detail=str(exc)) from exc
     return {"status": "modelo recarregado"}
+
+
+@app.post("/modelo/treinar", summary="Re-treina (original + novos) e gera um run versionado")
+def treinar_modelo(
+    *,
+    incluir_novos: Annotated[bool, Query(description="Concatena dados/novos ao treino")] = True,
+    promover: Annotated[bool, Query(description="Promove o run p/ producao ao final")] = True,
+) -> dict[str, object]:
+    """SINCRONO: roda o treino da etapa 7, versiona o run e (opcional) promove.
+
+    Bloqueia por alguns minutos (Optuna + CV). Em producao, mover para tarefa
+    em background para nao segurar o worker HTTP.
+    """
+    from sistematizacao.treinamento_avaliacao import treinar_publicar  # noqa: PLC0415
+
+    try:
+        resultado = treinar_publicar(incluir_novos=incluir_novos, promover_auto=promover)
+    except (FileNotFoundError, ImportError) as exc:
+        # o dataset base precisa estar visivel em DIR_DADOS (ou em CHURN_CSV):
+        # sem ele nao ha "original + novos" para treinar
+        raise HTTPException(
+            status_code=503, detail=f"Dataset base indisponivel para treinar: {exc}"
+        ) from exc
+    if promover:
+        limpar_cache()
+        carregar_modelo()
+    return {"status": "treinado", **resultado}
+
+
+@app.post("/modelo/promover/{run_id}", summary="Promove um run para producao (aprovacao humana)")
+def promover_modelo(run_id: str) -> dict[str, str]:
+    """Copia o binario do run para producao e recarrega, sem reiniciar o container."""
+    from sistematizacao.runs import promover  # noqa: PLC0415
+
+    try:
+        promover(run_id)
+    except FileNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    limpar_cache()
+    carregar_modelo()
+    return {"status": "promovido", "run_id": run_id}
+
+
+@app.get("/modelo/runs", summary="Historico de treinamentos e avaliacoes")
+def listar_runs() -> dict[str, object]:
+    """Conteudo do MANIFESTO.json: run em producao + historico completo."""
+    from sistematizacao.runs import ler_manifesto  # noqa: PLC0415
+
+    return ler_manifesto()
+
+
+@app.get(
+    "/modelo/runs/{run_id}/eda/{arquivo}",
+    summary="PNG da EDA de um run (revisao antes de promover)",
+    response_class=FileResponse,
+)
+def eda_do_run(run_id: str, arquivo: str) -> FileResponse:
+    """Serve um grafico de treinamentos/<run_id>/eda/, sem deixar escapar da pasta."""
+    from sistematizacao.runs import DIR_TREINAMENTOS  # noqa: PLC0415
+
+    pasta = (DIR_TREINAMENTOS / run_id / "eda").resolve()
+    destino = (pasta / arquivo).resolve()
+    if not destino.is_relative_to(pasta) or not destino.is_file():
+        raise HTTPException(status_code=404, detail="Grafico nao encontrado.")
+    return FileResponse(destino, media_type="image/png")
 
 
 def main() -> None:

@@ -2,12 +2,13 @@
 
 Otimiza o F1 da classe Churn na validacao cruzada do treino, escolhe o melhor
 trial que ainda respeita as metas de Acc e AUC, mede UMA vez no hold-out e
-persiste o pipeline treinado como binario em `modelos/`.
+persiste o pipeline treinado como binario em `modelos/treinamentos/<run_id>/`.
+Producao (`modelos/modelo_churn.joblib`) so e tocada por `runs.promover()`.
 """
 
 from __future__ import annotations
 
-import json
+import os
 from datetime import UTC, datetime
 from typing import TYPE_CHECKING, Any
 
@@ -24,15 +25,23 @@ from sklearn.model_selection import cross_validate
 from sklearn.pipeline import Pipeline
 
 from sistematizacao.carregamento_inicial import (
-    ARQUIVO_METADADOS,
-    ARQUIVO_MODELO,
-    DIR_MODELOS,
+    DIR_DADOS,
     SEED,
     Dados,
     preparar_tudo,
 )
+from sistematizacao.eda import gerar_eda
+from sistematizacao.runs import (
+    dir_treinamento,
+    escrever_json_atomico,
+    novo_run_id,
+    promover,
+    registrar_treinamento,
+)
 
 if TYPE_CHECKING:
+    from pathlib import Path
+
     import pandas as pd
 
 optuna.logging.set_verbosity(optuna.logging.WARNING)
@@ -138,37 +147,109 @@ def coeficientes(pipe: Pipeline, n: int = 10) -> None:
     print(coef.head(n))
 
 
-def salvar(pipe: Pipeline, params: dict[str, Any], metricas: dict[str, float]) -> None:
-    """Persiste o pipeline como binario .joblib + metadados em JSON."""
-    DIR_MODELOS.mkdir(parents=True, exist_ok=True)
-    joblib.dump(pipe, ARQUIVO_MODELO)
-    ARQUIVO_METADADOS.write_text(
-        json.dumps(
-            {
-                "nome": NOME_MODELO,
-                "params": params,
-                "metricas_teste": metricas,
-                "treinado_em": datetime.now(UTC).isoformat(),
-                "colunas_entrada": list(pipe.feature_names_in_)
-                if hasattr(pipe, "feature_names_in_")
-                else [],
-            },
-            indent=2,
-            ensure_ascii=False,
-        ),
-        encoding="utf-8",
+def salvar_run(
+    pipe: Pipeline,
+    params: dict[str, Any],
+    metricas: dict[str, float],
+    *,
+    run_id: str,
+    destino: Path,
+    n_amostras: int,
+    incluiu_novos: bool,
+    arquivos_novos: list[str],
+) -> None:
+    """Grava modelo + metadados DENTRO de treinamentos/<run_id>/ (escrita atomica)."""
+    destino.mkdir(parents=True, exist_ok=True)
+
+    joblib_dst = destino / "modelo_churn.joblib"
+    tmp = joblib_dst.with_name(joblib_dst.name + ".tmp")
+    joblib.dump(pipe, tmp)
+    os.replace(tmp, joblib_dst)  # noqa: PTH105
+
+    escrever_json_atomico(
+        destino / "metadados.json",
+        {
+            "run_id": run_id,
+            "nome": NOME_MODELO,
+            "params": params,
+            "metricas_teste": metricas,
+            "treinado_em": datetime.now(UTC).isoformat(),
+            "n_amostras": n_amostras,
+            "incluiu_novos": incluiu_novos,
+            "arquivos_novos_usados": arquivos_novos,
+            "colunas_entrada": list(pipe.feature_names_in_)
+            if hasattr(pipe, "feature_names_in_")
+            else [],
+        },
     )
-    print(f"\nModelo salvo em: {ARQUIVO_MODELO}")
-    print(f"Metadados em:    {ARQUIVO_METADADOS}")
+    print(f"\nRun salvo em: {destino}")
 
 
-def main() -> None:
-    dados = preparar_tudo()
-    melhor = otimizar(dados)
+def treinar_publicar(
+    *,
+    incluir_novos: bool = True,
+    promover_auto: bool = True,
+    n_trials: int = N_TRIALS,
+) -> dict[str, Any]:
+    """Mesmo caminho do treino desta etapa, mas versionado por run.
+
+    Grava treinamentos/<run_id>/ (modelo + metadados + eda). Se promover_auto,
+    copia o run para producao. Devolve run_id + metricas.
+    """
+    run_id = novo_run_id()
+    destino = dir_treinamento(run_id)
+
+    arquivos_novos: list[str] = []
+    if incluir_novos:
+        dir_novos = DIR_DADOS / "novos"
+        if dir_novos.exists():
+            arquivos_novos = [csv.name for csv in sorted(dir_novos.glob("*.csv"))]
+
+    dados = preparar_tudo(incluir_novos=incluir_novos)
+
+    gerar_eda(dados.df, destino / "eda")  # EDA do dataset deste run
+
+    melhor = otimizar(dados, n_trials)
     pipe = treinar(dados, melhor.params)
     metricas = avaliar(pipe, dados.X_test, dados.y_test)
     coeficientes(pipe)
-    salvar(pipe, melhor.params, metricas)
+
+    salvar_run(
+        pipe,
+        melhor.params,
+        metricas,
+        run_id=run_id,
+        destino=destino,
+        n_amostras=len(dados.X),
+        incluiu_novos=incluir_novos,
+        arquivos_novos=arquivos_novos,
+    )
+    registrar_treinamento(
+        run_id,
+        {
+            "treinado_em": datetime.now(UTC).isoformat(),
+            "metricas": metricas,
+            "n_amostras": len(dados.X),
+            "incluiu_novos": incluir_novos,
+            "arquivos_novos_usados": arquivos_novos,
+        },
+    )
+
+    if promover_auto:
+        promover(run_id)
+
+    return {
+        "run_id": run_id,
+        "promovido": promover_auto,
+        "n_amostras": len(dados.X),
+        "params": melhor.params,
+        "metricas": metricas,
+    }
+
+
+def main() -> None:
+    resultado = treinar_publicar(incluir_novos=False, promover_auto=True)
+    print("\nrun:", resultado["run_id"], "| promovido:", resultado["promovido"])
 
 
 if __name__ == "__main__":

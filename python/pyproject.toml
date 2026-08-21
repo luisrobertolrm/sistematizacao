@@ -6,7 +6,7 @@ readme = "README.md"
 authors = [
     { name = "Luis Roberto", email = "luisrobertolrm@gmail.com" }
 ]
-requires-python = ">=3.12"
+requires-python = "==3.12.13"
 # versoes fixas: o resultado do modelo depende da versao do scikit-learn/numpy,
 # e o binario em modelos/ so recarrega sem warning na mesma versao em que foi gravado.
 dependencies = [
@@ -17,6 +17,7 @@ dependencies = [
     "numpy==2.5.2",
     "optuna==4.9.0",
     "pandas==3.0.5",
+    "pandas-stubs~=3.0.5",
     "pydantic==2.13.4",
     "scikit-learn==1.9.0",
     "uvicorn[standard]==0.52.4",

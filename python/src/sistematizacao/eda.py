@@ -34,9 +34,9 @@ COLUNAS_CATEGORICAS = [
 ]
 
 
-def _salvar(fig: plt.Figure, nome: str) -> Path:
-    DIR_RELATORIOS.mkdir(parents=True, exist_ok=True)
-    destino = DIR_RELATORIOS / nome
+def _salvar(fig: plt.Figure, nome: str, dir_saida: Path = DIR_RELATORIOS) -> Path:
+    dir_saida.mkdir(parents=True, exist_ok=True)
+    destino = dir_saida / nome
     fig.tight_layout()
     fig.savefig(destino, dpi=120)
     plt.close(fig)
@@ -53,7 +53,7 @@ def visao_geral(df: pd.DataFrame) -> None:
     print(df.describe())
 
 
-def distribuicao_alvo(df: pd.DataFrame) -> None:
+def distribuicao_alvo(df: pd.DataFrame, dir_saida: Path = DIR_RELATORIOS) -> None:
     """2.2 Desbalanceamento do alvo (~73% x ~27%).
 
     Consequencia: acuracia sozinha engana. Por isso a selecao usa F1 como
@@ -69,10 +69,10 @@ def distribuicao_alvo(df: pd.DataFrame) -> None:
     ax.set_title("Distribuicao do alvo (0 = Fica, 1 = Churn)")
     ax.set_xlabel("Churn")
     ax.set_ylabel("Clientes")
-    _salvar(fig, "01_distribuicao_alvo.png")
+    _salvar(fig, "01_distribuicao_alvo.png", dir_saida)
 
 
-def numericas_por_churn(df: pd.DataFrame) -> None:
+def numericas_por_churn(df: pd.DataFrame, dir_saida: Path = DIR_RELATORIOS) -> None:
     """2.3 Distribuicao das numericas separada por churn.
 
     Espera-se: quem churna concentra-se em tenure baixo (cliente novo).
@@ -83,10 +83,10 @@ def numericas_por_churn(df: pd.DataFrame) -> None:
         df.loc[df[ALVO] == 1, col].plot(kind="hist", bins=30, alpha=0.6, ax=ax, label="Churn")
         ax.set_title(col)
         ax.legend()
-    _salvar(fig, "02_numericas_por_churn.png")
+    _salvar(fig, "02_numericas_por_churn.png", dir_saida)
 
 
-def categoricas_por_churn(df: pd.DataFrame) -> None:
+def categoricas_por_churn(df: pd.DataFrame, dir_saida: Path = DIR_RELATORIOS) -> None:
     """2.4 Taxa de churn dentro de cada categoria."""
     for col in COLUNAS_CATEGORICAS:
         print("=" * 40)
@@ -103,7 +103,18 @@ def categoricas_por_churn(df: pd.DataFrame) -> None:
         ax.set_title(f"Taxa de churn por {col}")
         ax.set_xlabel("proporcao de churn")
     axes.flat[-1].axis("off")  # sobra 1 subplot vazio (5 categorias em grade 2x3)
-    _salvar(fig, "03_categoricas_por_churn.png")
+    _salvar(fig, "03_categoricas_por_churn.png", dir_saida)
+
+
+def gerar_eda(df: pd.DataFrame, dir_saida: Path) -> None:
+    """Gera os 3 PNGs da EDA a partir de um df ja limpo, salvando em dir_saida.
+
+    Usado pelo treino versionado: a EDA precisa descrever o dataset que de fato
+    treinou aquele run (original + novos), nao o dataset base.
+    """
+    distribuicao_alvo(df, dir_saida)
+    numericas_por_churn(df, dir_saida)
+    categoricas_por_churn(df, dir_saida)
 
 
 def correlacoes(df: pd.DataFrame) -> None:
