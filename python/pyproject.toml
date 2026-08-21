@@ -6,7 +6,7 @@ readme = "README.md"
 authors = [
     { name = "Luis Roberto", email = "luisrobertolrm@gmail.com" }
 ]
-requires-python = "==3.12.13"
+requires-python = ">=3.12,<3.13"
 # versoes fixas: o resultado do modelo depende da versao do scikit-learn/numpy,
 # e o binario em modelos/ so recarrega sem warning na mesma versao em que foi gravado.
 dependencies = [

@@ -1,0 +1,21 @@
+{
+  "producao": "run_20260821T134624Z_94a0479d",
+  "treinamentos": [
+    {
+      "run_id": "run_20260821T134624Z_94a0479d",
+      "treinado_em": "2026-08-21T13:46:49.656794+00:00",
+      "metricas": {
+        "acc": 0.7856635911994322,
+        "f1_macro": 0.7037195376688483,
+        "f1_churn": 0.5479041916167665,
+        "auc": 0.8186920354439536
+      },
+      "n_amostras": 7042,
+      "incluiu_novos": true,
+      "arquivos_novos_usados": [
+        "clientes_fake_20260819_215809.csv"
+      ]
+    }
+  ],
+  "avaliacoes": []
+}
