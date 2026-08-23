@@ -14,7 +14,7 @@ from pydantic import BaseModel, Field
 
 from sistematizacao.carregamento_inicial import ARQUIVO_MODELO
 from sistematizacao.carregar_modelo import (
-    LIMIAR_PADRAO,
+    carregar_limiar,
     carregar_metadados,
     carregar_modelo,
     limpar_cache,
@@ -32,7 +32,7 @@ SimSemInternet = Literal["Yes", "No", "No internet service"]
 
 app = FastAPI(
     title="Sistematizacao - Analise de Churn",
-    description="Previsao de churn de clientes de telecom (modelo LogisticRegression tunada).",
+    description="Previsao de churn de clientes de telecom (modelo tunado + limiar calibrado).",
     version="1.0.0",
 )
 
@@ -107,10 +107,20 @@ def modelo() -> dict[str, object]:
     return meta
 
 
+def _limiar_query(limiar: float | None) -> float:
+    """None -> limiar calibrado em producao; senao usa o informado."""
+    if limiar is None:
+        try:
+            return carregar_limiar()
+        except FileNotFoundError:
+            return 0.5
+    return limiar
+
+
 @app.post("/prever", response_model=Previsao, summary="Analisa um cliente")
 def prever_um(
     cliente: Cliente,
-    limiar: Annotated[float, Query(ge=0, le=1)] = LIMIAR_PADRAO,
+    limiar: Annotated[float | None, Query(ge=0, le=1)] = None,
 ) -> Previsao:
     return prever_lote([cliente], limiar).previsoes[0]
 
@@ -118,18 +128,19 @@ def prever_um(
 @app.post("/prever/lote", response_model=RespostaLote, summary="Analisa varios clientes")
 def prever_lote(
     clientes: list[Cliente],
-    limiar: Annotated[float, Query(ge=0, le=1)] = LIMIAR_PADRAO,
+    limiar: Annotated[float | None, Query(ge=0, le=1)] = None,
 ) -> RespostaLote:
     if not clientes:
         raise HTTPException(status_code=422, detail="Envie ao menos um cliente.")
+    thr = _limiar_query(limiar)
     try:
-        resultado = prever([c.model_dump() for c in clientes], limiar=limiar)
+        resultado = prever([c.model_dump() for c in clientes], limiar=thr)
     except FileNotFoundError as exc:
         raise HTTPException(status_code=503, detail=str(exc)) from exc
 
     return RespostaLote(
         quantidade=len(resultado),
-        limiar=limiar,
+        limiar=thr,
         previsoes=[Previsao(**linha) for linha in resultado.to_dict(orient="records")],
     )
 
