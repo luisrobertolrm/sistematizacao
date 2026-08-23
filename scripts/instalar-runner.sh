@@ -125,6 +125,18 @@ echo
 journalctl -u "$SERVICO" -n 15 --no-pager | grep -E "Connected to GitHub|Listening for Jobs" \
   || echo "    (ainda conectando; veja: journalctl -u $SERVICO -f)"
 
+echo "==> 7/7 Timer de retreino (opcional, deploy atualiza se NOPASSWD existir)"
+SUDOERS="/etc/sudoers.d/sistematizacao-retreino"
+if sudo -n true 2>/dev/null; then
+  sudo "${DIR_APP}/scripts/instalar-timer.sh" 2>/dev/null \
+    || echo "    timer: rode depois do primeiro deploy: sudo ${DIR_APP}/scripts/instalar-timer.sh"
+else
+  echo "    Para o deploy instalar o timer sem senha, crie ${SUDOERS}:"
+  echo "      ${USER} ALL=(ALL) NOPASSWD: ${DIR_APP}/scripts/instalar-timer.sh"
+  echo "    Depois: sudo visudo -cf ${SUDOERS}"
+  echo "    Ou instale uma vez: sudo ${DIR_APP}/scripts/instalar-timer.sh"
+fi
+
 echo
 echo "Pronto. O runner deve aparecer como Idle em:"
 echo "  ${REPO_URL}/settings/actions/runners"
