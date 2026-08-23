@@ -46,12 +46,15 @@ jobs:
       - name: Instalar timer systemd no host
         run: |
           chmod +x /DATA/sistematizacao/scripts/retreinar.sh
-          sudo cp /DATA/sistematizacao/scripts/retreino.service /etc/systemd/system/retreino.service
-          sudo cp /DATA/sistematizacao/scripts/retreino.timer /etc/systemd/system/retreino.timer
-          sudo systemctl daemon-reload
-          sudo systemctl enable --now retreino.timer
-          systemctl is-enabled retreino.timer
-          systemctl list-timers retreino.timer --no-pager
+          chmod +x /DATA/sistematizacao/scripts/instalar-timer.sh
+          # O runner nao tem TTY: sudo pede senha e falha. So tenta se NOPASSWD existir.
+          if sudo -n true 2>/dev/null; then
+            sudo /DATA/sistematizacao/scripts/instalar-timer.sh
+          else
+            echo "::warning title=Timer systemd::Deploy OK, mas o timer nao foi instalado/atualizado."
+            echo "Rode uma vez no host: sudo /DATA/sistematizacao/scripts/instalar-timer.sh"
+            echo "Ou configure NOPASSWD para instalar-timer.sh (veja scripts/instalar-runner.sh)."
+          fi
 
       - name: Limpar imagens orfas
         if: success()
