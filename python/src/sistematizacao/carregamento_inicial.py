@@ -79,7 +79,14 @@ def localizar_csv() -> Path:
     if locais:
         return locais[0]
 
-    baixados = sorted(baixar_dataset().glob("*.csv"))
+    try:
+        baixados = sorted(baixar_dataset().glob("*.csv"))
+    except ImportError as exc:
+        msg = (
+            f"Nenhum CSV em {DIR_DADOS} e kagglehub nao esta instalado. "
+            "Coloque o Telco Customer Churn em python/dados/ ou defina CHURN_CSV."
+        )
+        raise FileNotFoundError(msg) from exc
     if not baixados:
         msg = "Nenhum CSV encontrado no dataset baixado."
         raise FileNotFoundError(msg)

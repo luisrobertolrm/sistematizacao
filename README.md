@@ -120,6 +120,36 @@ uv run sistematizacao-web
 
 ---
 
+## API em producao
+
+A API publica tem tres GETs de inspecao: `/health` confirma que o servico e o binario estao no ar; `/modelo` mostra o modelo atual (regressao logistica tunada e as metricas); `/modelo/runs` lista os treinamentos versionados e aponta qual run esta em producao.
+
+### `/health`
+
+[https://sistematizacao.myworklab.com.br/health](https://sistematizacao.myworklab.com.br/health)
+
+Diz se a API esta no ar e se o arquivo do modelo existe no disco.
+
+Resposta atual: `status: ok` e `modelo_disponivel: true`. Nao avalia qualidade do modelo — so confirma que o processo e o binario estao acessiveis.
+
+### `/modelo`
+
+[https://sistematizacao.myworklab.com.br/modelo](https://sistematizacao.myworklab.com.br/modelo)
+
+Mostra **qual modelo esta em producao**: nome, hiperparametros, metricas do teste, data do treino e colunas usadas.
+
+Hoje: **LogisticRegression (tunada)**, `run_id` `run_20260821T134624Z_94a0479d`, treinado em 21/08/2026, 7.042 amostras (base + um CSV fake). Metricas no hold-out: Acc ~0,79, AUC ~0,82, F1 macro ~0,70.
+
+### `/modelo/runs`
+
+[https://sistematizacao.myworklab.com.br/modelo/runs](https://sistematizacao.myworklab.com.br/modelo/runs)
+
+E o **historico versionado** (`MANIFESTO.json`): qual `run_id` esta em producao e a lista de treinamentos (e avaliacoes, se houver). Serve para auditoria e rollback (`POST /modelo/promover/{run_id}`).
+
+Hoje ha um treino na lista, o mesmo que esta em producao; `avaliacoes` esta vazia.
+
+---
+
 ## API
 
 Docs interativas: `http://<host>:<porta>/docs` (local **8000**; servidor em geral **8005**).

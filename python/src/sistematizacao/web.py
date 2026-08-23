@@ -249,6 +249,8 @@ def monitorar_modelo(
         return ciclo_diario(retreinar=retreinar)
     except FileNotFoundError as exc:
         raise HTTPException(status_code=503, detail=str(exc)) from exc
+    except (ImportError, OSError, ValueError, KeyError) as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
 
 
 @app.post("/modelo/promover/{run_id}", summary="Promove um run para producao (aprovacao humana)")
