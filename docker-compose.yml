@@ -27,8 +27,8 @@ services:
       SMTP_FROM: ${SMTP_FROM:-}
       EMAIL_TO: ${EMAIL_TO:-}
     volumes:
-      # CSVs gerados por POST /dados/fake sobrevivem a redeploys (fora do git)
-      - dados_novos:/app/dados/novos
+      # bind no host: Telco CSV + dados/novos (ls sem sudo em /DATA/sistematizacao/python/dados)
+      - ./python/dados:/app/dados
       # bind -> pasta do repo (git): runs versionados + producao + MANIFESTO.json
       - ./python/modelos:/app/modelos
     healthcheck:
@@ -43,6 +43,3 @@ services:
       timeout: 5s
       start_period: 20s
       retries: 3
-
-volumes:
-  dados_novos:

@@ -15,6 +15,8 @@ venv/
 # Dados brutos e saidas geradas (os binarios em python/modelos SAO versionados)
 python/dados/*.csv
 python/dados/novos/*.csv
+# dataset publico (Kaggle/IBM): precisa estar na imagem p/ /modelo/monitorar
+!python/dados/WA_Fn-UseC_-Telco-Customer-Churn.csv
 python/relatorios/*
 !python/relatorios/.gitkeep
 !python/dados/.gitkeep
