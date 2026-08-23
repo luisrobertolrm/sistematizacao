@@ -1,0 +1,306 @@
+{
+  "info": {
+    "name": "Sistematizacao - Analise de Churn",
+    "description": "API de previsao de churn (Telco Customer Churn).\n\nBase URL de producao: https://sistematizacao.myworklab.com.br\n\nDocs OpenAPI: {{baseUrl}}/docs",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "https://sistematizacao.myworklab.com.br",
+      "type": "string"
+    },
+    {
+      "key": "runId",
+      "value": "20260819_191802",
+      "type": "string"
+    },
+    {
+      "key": "edaArquivo",
+      "value": "churn_por_contrato.png",
+      "type": "string"
+    },
+    {
+      "key": "ultimoArquivo",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "Health & Metadados",
+      "item": [
+        {
+          "name": "GET /health",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/health",
+            "description": "Liveness/readiness: processo de pe e binario do modelo disponivel."
+          }
+        },
+        {
+          "name": "GET /modelo",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/modelo",
+            "description": "Metadados do modelo em producao (params Optuna, metricas, data do treino). Responde 503 se ainda nao treinado."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Previsao",
+      "item": [
+        {
+          "name": "POST /prever",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"SeniorCitizen\": 0,\n  \"Partner\": \"No\",\n  \"Dependents\": \"No\",\n  \"tenure\": 2,\n  \"PhoneService\": \"Yes\",\n  \"MultipleLines\": \"No\",\n  \"InternetService\": \"Fiber optic\",\n  \"OnlineSecurity\": \"No\",\n  \"OnlineBackup\": \"No\",\n  \"DeviceProtection\": \"No\",\n  \"TechSupport\": \"No\",\n  \"StreamingTV\": \"Yes\",\n  \"StreamingMovies\": \"Yes\",\n  \"Contract\": \"Month-to-month\",\n  \"PaperlessBilling\": \"Yes\",\n  \"PaymentMethod\": \"Electronic check\",\n  \"MonthlyCharges\": 95.5\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{baseUrl}}/prever",
+            "description": "Analisa um cliente. Query opcional: `limiar` (0-1). Sem limiar usa o calibrado em producao."
+          }
+        },
+        {
+          "name": "POST /prever (limiar customizado)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"SeniorCitizen\": 0,\n  \"Partner\": \"Yes\",\n  \"Dependents\": \"No\",\n  \"tenure\": 20,\n  \"PhoneService\": \"Yes\",\n  \"MultipleLines\": \"Yes\",\n  \"InternetService\": \"Fiber optic\",\n  \"OnlineSecurity\": \"No\",\n  \"OnlineBackup\": \"Yes\",\n  \"DeviceProtection\": \"No\",\n  \"TechSupport\": \"No\",\n  \"StreamingTV\": \"No\",\n  \"StreamingMovies\": \"Yes\",\n  \"Contract\": \"One year\",\n  \"PaperlessBilling\": \"Yes\",\n  \"PaymentMethod\": \"Credit card (automatic)\",\n  \"MonthlyCharges\": 78.3\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/prever?limiar=0.3",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "prever"
+              ],
+              "query": [
+                {
+                  "key": "limiar",
+                  "value": "0.3",
+                  "description": "Corte de probabilidade (0 a 1)"
+                }
+              ]
+            },
+            "description": "Mesmo endpoint com limiar mais agressivo na query string."
+          }
+        },
+        {
+          "name": "POST /prever/lote",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "[\n  {\n    \"SeniorCitizen\": 0,\n    \"Partner\": \"No\",\n    \"Dependents\": \"No\",\n    \"tenure\": 2,\n    \"PhoneService\": \"Yes\",\n    \"MultipleLines\": \"No\",\n    \"InternetService\": \"Fiber optic\",\n    \"OnlineSecurity\": \"No\",\n    \"OnlineBackup\": \"No\",\n    \"DeviceProtection\": \"No\",\n    \"TechSupport\": \"No\",\n    \"StreamingTV\": \"Yes\",\n    \"StreamingMovies\": \"Yes\",\n    \"Contract\": \"Month-to-month\",\n    \"PaperlessBilling\": \"Yes\",\n    \"PaymentMethod\": \"Electronic check\",\n    \"MonthlyCharges\": 95.5\n  },\n  {\n    \"SeniorCitizen\": 1,\n    \"Partner\": \"Yes\",\n    \"Dependents\": \"Yes\",\n    \"tenure\": 60,\n    \"PhoneService\": \"Yes\",\n    \"MultipleLines\": \"No\",\n    \"InternetService\": \"DSL\",\n    \"OnlineSecurity\": \"Yes\",\n    \"OnlineBackup\": \"Yes\",\n    \"DeviceProtection\": \"Yes\",\n    \"TechSupport\": \"Yes\",\n    \"StreamingTV\": \"No\",\n    \"StreamingMovies\": \"No\",\n    \"Contract\": \"Two year\",\n    \"PaperlessBilling\": \"No\",\n    \"PaymentMethod\": \"Bank transfer (automatic)\",\n    \"MonthlyCharges\": 45.0\n  }\n]",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/prever/lote",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "prever",
+                "lote"
+              ],
+              "query": [
+                {
+                  "key": "limiar",
+                  "value": "",
+                  "description": "Opcional (0 a 1)",
+                  "disabled": true
+                }
+              ]
+            },
+            "description": "Analisa varios clientes numa chamada. Query opcional: `limiar`."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Dados",
+      "item": [
+        {
+          "name": "POST /dados/fake",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/dados/fake?linhas=100&semente=7",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "dados",
+                "fake"
+              ],
+              "query": [
+                {
+                  "key": "linhas",
+                  "value": "100",
+                  "description": "1 a 100000 (padrao 100)"
+                },
+                {
+                  "key": "semente",
+                  "value": "7",
+                  "description": "Fixa o sorteio para reproduzir"
+                },
+                {
+                  "key": "nome",
+                  "value": "",
+                  "description": "Nome do arquivo CSV (padrao: timestamp)",
+                  "disabled": true
+                }
+              ]
+            },
+            "description": "Gera dados sinteticos e grava em dados/novos/. Retorna 201."
+          }
+        },
+        {
+          "name": "GET /dados/novos",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/dados/novos",
+            "description": "Lista CSVs ja gerados em dados/novos/ (nome, linhas, bytes)."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Modelo (treino & monitoramento)",
+      "item": [
+        {
+          "name": "POST /modelo/recarregar",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": "{{baseUrl}}/modelo/recarregar",
+            "description": "Recarrega o binario do disco sem reiniciar o container."
+          }
+        },
+        {
+          "name": "POST /modelo/treinar",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/modelo/treinar?incluir_novos=true&promover=true",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "modelo",
+                "treinar"
+              ],
+              "query": [
+                {
+                  "key": "incluir_novos",
+                  "value": "true",
+                  "description": "Concatena dados/novos ao treino"
+                },
+                {
+                  "key": "promover",
+                  "value": "true",
+                  "description": "Promove o run para producao ao final"
+                }
+              ]
+            },
+            "description": "Re-treina (original + novos) e gera run versionado. SINCRONO — pode levar varios minutos (Optuna + CV)."
+          }
+        },
+        {
+          "name": "POST /modelo/monitorar",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/modelo/monitorar?retreinar=true",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "modelo",
+                "monitorar"
+              ],
+              "query": [
+                {
+                  "key": "retreinar",
+                  "value": "true",
+                  "description": "Se houver drift, dispara retreino e promove so se Acc/AUC ok"
+                }
+              ]
+            },
+            "description": "Avalia drift do modelo em producao; envia e-mail e retreina condicionalmente."
+          }
+        },
+        {
+          "name": "POST /modelo/promover/{run_id}",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": "{{baseUrl}}/modelo/promover/{{runId}}",
+            "description": "Promove um run para producao (aprovacao humana). Substitua {{runId}} pelo ID do run."
+          }
+        },
+        {
+          "name": "GET /modelo/runs",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/modelo/runs",
+            "description": "Historico de treinamentos e avaliacoes (conteudo do MANIFESTO.json)."
+          }
+        },
+        {
+          "name": "GET /modelo/runs/{run_id}/eda/{arquivo}",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/modelo/runs/{{runId}}/eda/{{edaArquivo}}",
+            "description": "Retorna PNG da EDA de um run (revisao antes de promover). Ajuste runId e edaArquivo."
+          }
+        }
+      ]
+    }
+  ]
+}
