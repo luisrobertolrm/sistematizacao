@@ -26,6 +26,8 @@ if TYPE_CHECKING:
     from sklearn.pipeline import Pipeline
 
 LIMIAR_PADRAO = 0.5
+_MAPA_FAIXA_TEXTO = {0: "novo", 1: "intermediario", 2: "antigo"}
+_MIN_PARTES_PRE = 2
 
 
 @lru_cache(maxsize=1)
@@ -76,6 +78,39 @@ def limpar_cache() -> None:
     carregar_metadados.cache_clear()
 
 
+def alinhar_entrada_ao_modelo(df: pd.DataFrame) -> pd.DataFrame:
+    """Ajusta faixa_tenure e dtypes categoricos ao binario em producao.
+
+    Modelos gravados antes da faixa numerica esperam 'novo'/'intermediario'/'antigo'.
+    sklearn 1.9 + pandas 3 falha se categoricas ficarem em StringDtype.
+    """
+    try:
+        pipe = carregar_modelo()
+    except FileNotFoundError:
+        return df
+
+    pre = pipe.named_steps.get("pre")
+    if pre is None or len(pre.transformers_) < _MIN_PARTES_PRE:
+        return df
+
+    cat_cols = list(pre.transformers_[1][2])
+    df = df.copy()
+
+    if "faixa_tenure" in cat_cols and "faixa_tenure" in df.columns:
+        ohe = pre.named_transformers_["cat"]
+        idx = cat_cols.index("faixa_tenure")
+        cats = ohe.categories_[idx]
+        faixa_numerica = pd.api.types.is_numeric_dtype(df["faixa_tenure"])
+        if len(cats) and isinstance(cats[0], str) and faixa_numerica:
+            df["faixa_tenure"] = df["faixa_tenure"].map(_MAPA_FAIXA_TEXTO)
+
+    for col in cat_cols:
+        if col in df.columns:
+            df[col] = df[col].astype(object)
+
+    return df
+
+
 def preparar_entrada(dados: pd.DataFrame | dict[str, Any] | list[dict[str, Any]]) -> pd.DataFrame:
     """Aplica a mesma engenharia de atributos do treino aos dados novos."""
     if isinstance(dados, dict):
@@ -88,6 +123,7 @@ def preparar_entrada(dados: pd.DataFrame | dict[str, Any] | list[dict[str, Any]]
     if "tenure" in df.columns:
         df = aplicar_engenharia_atributos(df)
 
+    df = alinhar_entrada_ao_modelo(df)
     return df.drop(columns=[*COLUNAS_REMOVIDAS, ALVO], errors="ignore")
 
 

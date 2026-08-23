@@ -249,7 +249,7 @@ def monitorar_modelo(
         return ciclo_diario(retreinar=retreinar)
     except FileNotFoundError as exc:
         raise HTTPException(status_code=503, detail=str(exc)) from exc
-    except (ImportError, OSError, ValueError, KeyError) as exc:
+    except (ImportError, OSError, ValueError, KeyError, TypeError) as exc:
         raise HTTPException(status_code=503, detail=str(exc)) from exc
 
 
