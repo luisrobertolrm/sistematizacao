@@ -1,0 +1,11 @@
+# Copiar para /etc/systemd/system/retreino.timer no host e habilitar com:
+#   sudo systemctl enable --now retreino.timer
+[Unit]
+Description=Dispara o re-treino periodicamente
+
+[Timer]
+OnCalendar=weekly
+Persistent=true
+
+[Install]
+WantedBy=timers.target

@@ -1,6 +1,6 @@
 # Sistematizacao - Previsao de Churn
 
-Pipeline de ML derivado do notebook `sistematizacao_escolha_modelo2.ipynb`
+Pipeline de ML derivado do notebook `sistematizacao_escolha_modelo2_bkp_curso_2`
 (dataset [Telco Customer Churn](https://www.kaggle.com/datasets/blastchar/telco-customer-churn)),
 quebrado em modulos executaveis e exposto por uma API HTTP.
 
@@ -8,11 +8,11 @@ quebrado em modulos executaveis e exposto por uma API HTTP.
 
 | Arquivo | Etapa do notebook | O que faz |
 |---|---|---|
-| `src/sistematizacao/carregamento_inicial.py` | 1 e 3 | download/leitura do CSV, limpeza, engenharia de atributos, split treino/teste e pre-processador |
+| `src/sistematizacao/carregamento_inicial.py` | 1 e 3 | download/leitura do CSV, limpeza, engenharia de atributos (`tenure` + `faixa_tenure`), split treino/teste e pre-processador |
 | `src/sistematizacao/eda.py` | 2 | analise exploratoria; graficos salvos em `relatorios/` |
-| `src/sistematizacao/treinamento_avaliacao.py` | 7 | tuning da LogisticRegression com Optuna, avaliacao no hold-out e gravacao do binario |
-| `src/sistematizacao/observacao.py` | 8 | alimenta o binario em lotes e acompanha a metrica acumulada |
-| `src/sistematizacao/carregar_modelo.py` | — | carrega o `.joblib` e faz predicao sobre dados novos |
+| `src/sistematizacao/treinamento_avaliacao.py` | 4–7 | baseline, Optuna (Prec_churn), selecao do vencedor, limiar calibrado, avaliacao no hold-out e gravacao do binario |
+| `src/sistematizacao/observacao.py` | 8 | alimenta o binario em lotes com limiar de producao e acompanha Prec_churn acumulada |
+| `src/sistematizacao/carregar_modelo.py` | — | carrega bundle `{pipe, threshold, modelo}` e faz predicao |
 | `src/sistematizacao/gerador_fake.py` | — | gera CSVs sinteticos com Faker, identicos ao original, em `dados/novos/` |
 | `src/sistematizacao/web.py` | — | API FastAPI para enviar novos dados de analise |
 | `modelos/` | — | binarios treinados (`modelo_churn.joblib` + metadados JSON) |
@@ -28,7 +28,7 @@ uv sync --all-extras
 #   3) download via kagglehub (exige credenciais do Kaggle)
 
 uv run python -m sistematizacao.eda                    # etapa 2
-uv run python -m sistematizacao.treinamento_avaliacao  # etapa 7 -> gera modelos/modelo_churn.joblib
+uv run python -m sistematizacao.treinamento_avaliacao  # etapas 4-7 -> gera modelos/modelo_churn.joblib
 uv run python -m sistematizacao.observacao             # etapa 8
 uv run python -m sistematizacao.web                    # API em http://localhost:8000/docs
 ```
@@ -57,7 +57,8 @@ curl -X POST http://localhost:8000/prever -H "Content-Type: application/json" -d
 ```
 
 O campo `tenure` e enviado cru: a API aplica a mesma engenharia de atributos do
-treino (`faixa_tenure`) antes de chamar o modelo.
+treino (`faixa_tenure` numerica) antes de chamar o modelo. Sem informar `limiar`
+na query, usa o limiar calibrado gravado no treino.
 
 ### Postman
 

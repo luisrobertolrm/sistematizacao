@@ -1,0 +1,8 @@
+# Copiar para /etc/systemd/system/retreino.service no host.
+[Unit]
+Description=Re-treino do modelo de churn
+After=docker.service
+
+[Service]
+Type=oneshot
+ExecStart=/srv/Sistematizacao/scripts/retreinar.sh

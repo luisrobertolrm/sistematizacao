@@ -3,7 +3,9 @@
 # --- estagio 1: dependencias -------------------------------------------------
 FROM python:3.12-slim AS builder
 
-COPY --from=ghcr.io/astral-sh/uv:0.12.0 /uv /uvx /bin/
+# uv vem do PyPI (nao do ghcr.io): o servidor de casa nao resolve ghcr.io
+# e o build ja depende do pypi.org de qualquer forma.
+RUN pip install --no-cache-dir uv==0.12.0
 
 ENV UV_COMPILE_BYTECODE=1 \
     UV_LINK_MODE=copy \

@@ -1,8 +1,7 @@
 """Carregamento do binario do modelo e predicao sobre novos dados.
 
-E a unica porta de entrada do modelo treinado: tanto a API (web.py) quanto a
-etapa de observacao (observacao.py) usam este modulo, garantindo que a mesma
-engenharia de atributos da etapa 1 seja aplicada aos dados novos.
+Suporta bundle {pipe, threshold, modelo} gravado pelo treinamento (curso_2)
+e pipelines legados salvos diretamente.
 """
 
 from __future__ import annotations
@@ -30,8 +29,7 @@ LIMIAR_PADRAO = 0.5
 
 
 @lru_cache(maxsize=1)
-def carregar_modelo() -> Pipeline:
-    """Le o pipeline treinado do disco (cacheado: o arquivo so e lido uma vez)."""
+def _carregar_objeto() -> Any:
     if not ARQUIVO_MODELO.exists():
         msg = (
             f"Modelo nao encontrado em {ARQUIVO_MODELO}. "
@@ -42,16 +40,39 @@ def carregar_modelo() -> Pipeline:
 
 
 @lru_cache(maxsize=1)
+def carregar_modelo() -> Pipeline:
+    """Pipeline sklearn treinado."""
+    obj = _carregar_objeto()
+    if isinstance(obj, dict):
+        return obj["pipe"]
+    return obj
+
+
+@lru_cache(maxsize=1)
+def carregar_limiar() -> float:
+    """Limiar calibrado na etapa 7 (Prec_churn); fallback metadados ou 0.5."""
+    obj = _carregar_objeto()
+    if isinstance(obj, dict) and "threshold" in obj:
+        return float(obj["threshold"])
+    meta = carregar_metadados()
+    if meta.get("threshold") is not None:
+        return float(meta["threshold"])
+    return LIMIAR_PADRAO
+
+
+@lru_cache(maxsize=1)
 def carregar_metadados() -> dict[str, Any]:
-    """Metadados gravados no treino (params, metricas, data)."""
+    """Metadados gravados no treino (params, metricas, limiar, data)."""
     if not ARQUIVO_METADADOS.exists():
         return {}
     return json.loads(ARQUIVO_METADADOS.read_text(encoding="utf-8"))
 
 
 def limpar_cache() -> None:
-    """Descarta o modelo em memoria (util apos um novo treino)."""
+    """Descarta caches em memoria (util apos novo treino)."""
+    _carregar_objeto.cache_clear()
     carregar_modelo.cache_clear()
+    carregar_limiar.cache_clear()
     carregar_metadados.cache_clear()
 
 
@@ -72,9 +93,11 @@ def preparar_entrada(dados: pd.DataFrame | dict[str, Any] | list[dict[str, Any]]
 
 def prever(
     dados: pd.DataFrame | dict[str, Any] | list[dict[str, Any]],
-    limiar: float = LIMIAR_PADRAO,
+    limiar: float | None = None,
 ) -> pd.DataFrame:
     """Devolve probabilidade de churn, classe prevista e rotulo legivel."""
+    if limiar is None:
+        limiar = carregar_limiar()
     X = preparar_entrada(dados)
     modelo = carregar_modelo()
 
@@ -93,6 +116,8 @@ def prever(
 def main() -> None:
     meta = carregar_metadados()
     print("Modelo:", meta.get("nome", "desconhecido"))
+    print("Algoritmo:", meta.get("modelo", "?"))
+    print("Limiar:", carregar_limiar())
     print("Treinado em:", meta.get("treinado_em", "?"))
     print("Params:", meta.get("params", {}))
     print("Metricas no teste:", meta.get("metricas_teste", {}))
