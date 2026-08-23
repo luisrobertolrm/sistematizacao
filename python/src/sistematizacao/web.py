@@ -234,6 +234,23 @@ def treinar_modelo(
     return {"status": "treinado", **resultado}
 
 
+@app.post("/modelo/monitorar", summary="Drift do modelo, e-mail e retreino condicionado")
+def monitorar_modelo(
+    *,
+    retreinar: Annotated[
+        bool,
+        Query(description="Se houver drift, dispara retreino e promove so se Acc/AUC ok"),
+    ] = True,
+) -> dict[str, object]:
+    """Avalia o binario de producao; alarma e retreina apenas se houver drift."""
+    from sistematizacao.monitoramento import ciclo_diario  # noqa: PLC0415
+
+    try:
+        return ciclo_diario(retreinar=retreinar)
+    except FileNotFoundError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+
+
 @app.post("/modelo/promover/{run_id}", summary="Promove um run para producao (aprovacao humana)")
 def promover_modelo(run_id: str) -> dict[str, str]:
     """Copia o binario do run para producao e recarrega, sem reiniciar o container."""

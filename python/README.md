@@ -12,6 +12,7 @@ quebrado em modulos executaveis e exposto por uma API HTTP.
 | `src/sistematizacao/eda.py` | 2 | analise exploratoria; graficos salvos em `relatorios/` |
 | `src/sistematizacao/treinamento_avaliacao.py` | 4–7 | baseline, Optuna (Prec_churn), selecao do vencedor, limiar calibrado, avaliacao no hold-out e gravacao do binario |
 | `src/sistematizacao/observacao.py` | 8 | alimenta o binario em lotes com limiar de producao e acompanha Prec_churn acumulada |
+| `src/sistematizacao/monitoramento.py` | — | drift diario (Prec/AUC/volume), e-mail e retreino so se alarmar |
 | `src/sistematizacao/carregar_modelo.py` | — | carrega bundle `{pipe, threshold, modelo}` e faz predicao |
 | `src/sistematizacao/gerador_fake.py` | — | gera CSVs sinteticos com Faker, identicos ao original, em `dados/novos/` |
 | `src/sistematizacao/web.py` | — | API FastAPI para enviar novos dados de analise |
@@ -30,6 +31,7 @@ uv sync --all-extras
 uv run python -m sistematizacao.eda                    # etapa 2
 uv run python -m sistematizacao.treinamento_avaliacao  # etapas 4-7 -> gera modelos/modelo_churn.joblib
 uv run python -m sistematizacao.observacao             # etapa 8
+uv run python -m sistematizacao.monitoramento          # drift + e-mail + retreino condicionado
 uv run python -m sistematizacao.web                    # API em http://localhost:8000/docs
 ```
 
@@ -44,6 +46,9 @@ uv run python -m sistematizacao.web                    # API em http://localhost
 | POST | `/dados/fake` | gera dados sinteticos e grava em `dados/novos/` |
 | GET | `/dados/novos` | lista os CSVs ja gerados |
 | POST | `/modelo/recarregar` | recarrega o binario do disco apos novo treino |
+| POST | `/modelo/treinar` | re-treina (original + novos) e opcionalmente promove |
+| POST | `/modelo/monitorar` | mede drift; e-mail; retreina so se alarmar |
+| POST | `/modelo/promover/{run_id}` | promove um run para producao |
 
 ```bash
 curl -X POST http://localhost:8000/prever -H "Content-Type: application/json" -d '{
@@ -112,6 +117,19 @@ CHURN_CSV=dados/novos/clientes_fake_20260819_200513.csv uv run python -m sistema
 ```
 
 Os CSVs gerados nao entram no git.
+
+## Monitoramento (systemd)
+
+O host dispara `scripts/retreinar.sh` via `scripts/retreino.timer` (06:00 diario).
+O script chama `POST /modelo/monitorar?retreinar=true`:
+
+1. Avalia o modelo de producao em `dados/novos/` (se houver) ou no hold-out.
+2. Alarma se Prec_churn < 0,65, AUC < 0,80 ou volume de contatos longe de ~17%.
+3. Envia e-mail (SMTP_HOST + EMAIL_TO) e so entao retreina.
+4. Promove o candidato apenas se Acc >= 0,80 e AUC >= 0,82.
+5. Sem drift, o modelo do dia anterior permanece.
+
+Sem SMTP configurado o alarme vai para o log do journald (`journalctl -u retreino`).
 
 ## Docker
 

@@ -1,4 +1,4 @@
-"""Etapas 4–7 — selecao, tuning, avaliacao e limiar (notebook curso_2).
+"""Etapas 4-7 - selecao, tuning, avaliacao e limiar (notebook curso_2).
 
 Fluxo:
   4) baseline sem Optuna (5 modelos, CV)
@@ -55,6 +55,7 @@ if TYPE_CHECKING:
     from pathlib import Path
 
     import pandas as pd
+    from sklearn.base import ClassifierMixin
 
 optuna.logging.set_verbosity(optuna.logging.WARNING)
 
@@ -115,7 +116,7 @@ def baseline_cv(dados: Dados) -> dict[str, ResultadoModelo]:
     return resultados
 
 
-def build_model_optuna(nome: str, trial: optuna.Trial):
+def build_model_optuna(nome: str, trial: optuna.Trial) -> ClassifierMixin:
     """Espaco de busca Optuna por algoritmo (etapa 5)."""
     if nome == "LogisticRegression":
         cw_choice = trial.suggest_categorical("class_weight", [None, "balanced", "custom"])
@@ -234,9 +235,8 @@ def calibrar_limiar(pipe: Pipeline, dados: Dados) -> float:
             continue
         acc = accuracy_score(dados.y_train, pred)
         prec = precision_score(dados.y_train, pred, zero_division=0)
-        if acc >= META_ACC:
-            if melhor is None or prec > melhor[0]:
-                melhor = (prec, thr, acc, recall_score(dados.y_train, pred, zero_division=0))
+        if acc >= META_ACC and (melhor is None or prec > melhor[0]):
+            melhor = (prec, thr, acc, recall_score(dados.y_train, pred, zero_division=0))
     if melhor:
         print(
             f"Limiar={melhor[1]:.3f}  CV Prec_churn={melhor[0]:.4f}  "
@@ -361,7 +361,7 @@ def treinar_publicar(
     promover_auto: bool = True,
     n_trials: int = N_TRIALS,
 ) -> dict[str, Any]:
-    """Pipeline completo (etapas 4–7) versionado por run."""
+    """Pipeline completo (etapas 4-7) versionado por run."""
     run_id = novo_run_id()
     destino = dir_treinamento(run_id)
 
@@ -437,10 +437,14 @@ def treinar_publicar(
 def main() -> None:
     resultado = treinar_publicar(incluir_novos=False, promover_auto=True)
     print(
-        "\nrun:", resultado["run_id"],
-        "| modelo:", resultado["modelo"],
-        "| limiar:", f"{resultado['threshold']:.3f}",
-        "| promovido:", resultado["promovido"],
+        "\nrun:",
+        resultado["run_id"],
+        "| modelo:",
+        resultado["modelo"],
+        "| limiar:",
+        f"{resultado['threshold']:.3f}",
+        "| promovido:",
+        resultado["promovido"],
     )
 
 

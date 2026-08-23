@@ -1,10 +1,10 @@
 # Copiar para /etc/systemd/system/retreino.timer no host e habilitar com:
 #   sudo systemctl enable --now retreino.timer
 [Unit]
-Description=Dispara o re-treino periodicamente
+Description=Job diario de drift/retreino do modelo de churn
 
 [Timer]
-OnCalendar=weekly
+OnCalendar=*-*-* 06:00:00
 Persistent=true
 
 [Install]
