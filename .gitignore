@@ -20,6 +20,9 @@ python/relatorios/*
 !python/dados/.gitkeep
 !python/dados/novos/.gitkeep
 
+# Temporarios da escrita atomica dos artefatos de modelo
+python/modelos/**/*.tmp
+
 # Notebooks
 .ipynb_checkpoints/
 

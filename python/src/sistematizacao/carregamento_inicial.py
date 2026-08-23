@@ -37,13 +37,12 @@ N_DOBRAS = 5
 #   customerID    -> identificador, nao e atributo
 #   gender        -> taxa de churn praticamente igual entre os sexos (sem sinal)
 #   TotalCharges  -> redundante: deriva de tenure x MonthlyCharges
-#   tenure        -> substituido pela faixa categorica (faixa_tenure)
-COLUNAS_REMOVIDAS = ["customerID", "gender", "TotalCharges", "tenure"]
+#   tenure        -> MANTIDO (forte sinal com Churn); faixa_tenure complementa
+COLUNAS_REMOVIDAS = ["customerID", "gender", "TotalCharges"]
 
-# faixas de tempo de casa usadas na engenharia de atributos
+# faixas de tempo de casa (0=novo, 1=medio, 2=antigo) — alinhado ao notebook
 LIMITE_CLIENTE_NOVO = 9
 LIMITE_CLIENTE_INTERMEDIARIO = 29
-FAIXAS_TENURE = ["novo", "intermediario", "antigo"]
 
 
 @dataclass
@@ -123,18 +122,13 @@ def limpar(df: pd.DataFrame) -> pd.DataFrame:
 
 
 def aplicar_engenharia_atributos(df: pd.DataFrame) -> pd.DataFrame:
-    """Cria faixa_tenure (novo / intermediario / antigo) a partir de tenure.
-
-    A faixa substitui o tenure continuo: o efeito do tempo de casa sobre o churn
-    e forte no inicio e satura depois, entao a versao categorica descreve melhor
-    esse comportamento do que uma reta.
-    """
+    """Cria faixa_tenure numerica (0/1/2) a partir de tenure; mantem tenure."""
     df = df.copy()
-    df["faixa_tenure"] = pd.cut(
-        df["tenure"],
-        bins=[-np.inf, LIMITE_CLIENTE_NOVO, LIMITE_CLIENTE_INTERMEDIARIO, np.inf],
-        labels=FAIXAS_TENURE,
-    ).astype(str)
+    df["faixa_tenure"] = np.select(
+        [df["tenure"] <= LIMITE_CLIENTE_NOVO, df["tenure"] <= LIMITE_CLIENTE_INTERMEDIARIO],
+        [0, 1],
+        default=2,
+    ).astype(int)
     return df
 
 
