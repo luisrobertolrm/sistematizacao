@@ -43,6 +43,16 @@ jobs:
           docker compose logs --tail=80
           exit 1
 
+      - name: Instalar timer systemd no host
+        run: |
+          chmod +x /DATA/sistematizacao/scripts/retreinar.sh
+          sudo cp /DATA/sistematizacao/scripts/retreino.service /etc/systemd/system/retreino.service
+          sudo cp /DATA/sistematizacao/scripts/retreino.timer /etc/systemd/system/retreino.timer
+          sudo systemctl daemon-reload
+          sudo systemctl enable --now retreino.timer
+          systemctl is-enabled retreino.timer
+          systemctl list-timers retreino.timer --no-pager
+
       - name: Limpar imagens orfas
         if: success()
         run: docker image prune -f

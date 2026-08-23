@@ -1,8 +1,9 @@
-# Sistematizacao - Previsao de Churn
+# Pacote Python (`sistematizacao`)
+
+Documentacao do projeto (arquitetura, API, Docker, systemd): **[README na raiz](../README.md)**.
 
 Pipeline de ML derivado do notebook `sistematizacao_escolha_modelo2_bkp_curso_2`
-(dataset [Telco Customer Churn](https://www.kaggle.com/datasets/blastchar/telco-customer-churn)),
-quebrado em modulos executaveis e exposto por uma API HTTP.
+([Telco Customer Churn](https://www.kaggle.com/datasets/blastchar/telco-customer-churn)).
 
 ## Estrutura
 
@@ -143,6 +144,6 @@ binario sem rebuildar.
 
 ## CI
 
-`.github/workflows/ci.yml` roda ruff (lint + formatacao), smoke test dos modulos
-e da API, e faz build da imagem — publicando em `ghcr.io` nos pushes para
-`master`/`main` e em tags `v*`.
+`.github/workflows/ci.yml` (na raiz do repo) roda ruff, smoke test dos modulos
+e da API, e faz **build da imagem sem push** para registry. A imagem que roda
+no servidor e construida pelo `.github/workflows/deploy.yml` (self-hosted).

@@ -4,11 +4,11 @@
 # O container nao commita: credencial de git nao entra na imagem.
 #
 # Uso:   ./retreinar.sh
-# Env:   APP_PORT (padrao 8005)  REPO (padrao /srv/Sistematizacao)
+# Env:   APP_PORT (padrao 8005)  REPO (padrao /DATA/sistematizacao)
 set -euo pipefail
 
 PORTA="${APP_PORT:-8005}"
-REPO="${REPO:-/srv/Sistematizacao}"
+REPO="${REPO:-/DATA/sistematizacao}"
 BASE="http://localhost:${PORTA}"
 
 # 1) monitora (e so retreina se houver drift). Optuna pode levar varios minutos.

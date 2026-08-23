@@ -1,8 +1,11 @@
-# Copiar para /etc/systemd/system/retreino.service no host.
+# Instalado no host pelo workflow de deploy (nao roda dentro do container).
 [Unit]
 Description=Job diario de drift, e-mail e retreino do modelo de churn
 After=docker.service
+Requires=docker.service
 
 [Service]
 Type=oneshot
-ExecStart=/srv/Sistematizacao/scripts/retreinar.sh
+WorkingDirectory=/DATA/sistematizacao
+EnvironmentFile=-/DATA/sistematizacao/.env
+ExecStart=/DATA/sistematizacao/scripts/retreinar.sh
