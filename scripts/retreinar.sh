@@ -1,9 +1,7 @@
 #!/usr/bin/env bash
-# Re-treino do modelo de churn, disparado no HOST (nunca dentro do container).
+# Job diario no HOST: avalia drift, e-mail, retreino condicionado, versiona artefatos.
 #
-# O container nao commita: credencial de git nao entra na imagem. Quem dispara
-# o treino versiona os artefatos depois, pela pasta bind-montada em
-# python/modelos.
+# O container nao commita: credencial de git nao entra na imagem.
 #
 # Uso:   ./retreinar.sh
 # Env:   APP_PORT (padrao 8005)  REPO (padrao /srv/Sistematizacao)
@@ -13,20 +11,20 @@ PORTA="${APP_PORT:-8005}"
 REPO="${REPO:-/srv/Sistematizacao}"
 BASE="http://localhost:${PORTA}"
 
-# 1) treina (gera o run versionado) e promove automaticamente
-curl -fsS -X POST "${BASE}/modelo/treinar?incluir_novos=true&promover=true"
+# 1) monitora (e so retreina se houver drift). Optuna pode levar varios minutos.
+curl -fsS --max-time 3600 -X POST "${BASE}/modelo/monitorar?retreinar=true"
 echo
 
-# 2) versiona os artefatos no git do host
+# 2) versiona os artefatos no git do host (no-op se nao houve run novo)
 cd "$REPO"
 git add python/modelos
 if git diff --cached --quiet; then
   echo "Nada novo em python/modelos para commitar."
 else
-  git commit -m "modelo: retrain $(date -u +%FT%TZ)"
+  git commit -m "modelo: monitor/retrain $(date -u +%FT%TZ)"
   git push
 fi
 
-# 3) garante o reload a quente (o endpoint ja recarrega quando promover=true)
+# 3) reload a quente (seguro mesmo quando nao houve promocao)
 curl -fsS -X POST "${BASE}/modelo/recarregar"
 echo

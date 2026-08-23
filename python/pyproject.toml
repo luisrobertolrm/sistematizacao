@@ -41,6 +41,7 @@ sistematizacao-web = "sistematizacao.web:main"
 sistematizacao-eda = "sistematizacao.eda:main"
 sistematizacao-treino = "sistematizacao.treinamento_avaliacao:main"
 sistematizacao-observacao = "sistematizacao.observacao:main"
+sistematizacao-monitor = "sistematizacao.monitoramento:main"
 
 [tool.ruff]
 target-version = "py312"

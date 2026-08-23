@@ -39,7 +39,7 @@ jobs:
           uv run python -c "
           import importlib
           for m in ['carregamento_inicial', 'eda', 'treinamento_avaliacao',
-                    'observacao', 'carregar_modelo', 'web']:
+                    'observacao', 'carregar_modelo', 'monitoramento', 'web']:
               importlib.import_module(f'sistematizacao.{m}')
               print('ok:', m)
           "
